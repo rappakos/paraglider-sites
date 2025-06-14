@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% set title = name %}
+{% block content %}
+    <div>DHV ID {{data[0].dhv_site_id}}</div>
+    <div>{{data[0].geo_latitude}}, {{data[0].geo_longitude}}</div>
+    <div>flight count</div>
+    <div>last flight date</div>
+
+<div>
+    <form action="/{{name}}" method="post" class="w3-container " autocomplete="off" >
+        <input type="submit" value="Refresh flights list" class="w3-button"  />
+    </form>
+</div>
+
+
+    <table id="flights" class="w3-table w3-bordered">
+        <tr>
+            <th>Flight date</th>
+            <th>XC points</th>
+            <th>Duration</th>
+        </tr>
+        {% for flight in flights %}
+        <tr>
+            <td>YYYY-mm-dd</td>
+            <td>12.34</td>
+            <td>01:23:45</td>
+        </tr>
+        {% endfor %}
+</table>
+{% endblock %}

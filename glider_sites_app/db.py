@@ -21,3 +21,17 @@ async def setup_db(app):
             sql_script = sql_file.read()
             await db.executescript(sql_script)
             await db.commit()
+
+
+async def get_stats():
+    import pandas as pd
+    
+    engine = create_engine(f'sqlite:///{DB_NAME}')
+    with engine.connect() as db:
+        param = {}
+        df  = pd.read_sql_query(text(f"""
+                        SELECT 
+                            site_name, dhv_site_id, geo_latitude, geo_longitude
+                        FROM sites 
+                    """), db, params=param)
+        return df

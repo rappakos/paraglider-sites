@@ -1,0 +1,8 @@
+aiohttp
+aiohttp_jinja2
+aiosqlite
+numpy
+pandas
+python-dotenv
+sqlalchemy
+requests

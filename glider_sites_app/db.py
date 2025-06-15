@@ -5,7 +5,7 @@ from pandas import DataFrame, read_sql_query
 
 DB_NAME = './glider_sites.db'
 INIT_SCRIPT = './glider_sites_app/init_db.sql'
-START_DATE = '2018-01-01' # do not load earlier flights
+#START_DATE = '2018-01-01' # do not load earlier flights
 
 
 async def setup_db(app):
@@ -31,7 +31,7 @@ async def get_stats():
         param = {}
         df  = pd.read_sql_query(text(f"""
                         SELECT 
-                            site_name, dhv_site_id, geo_latitude, geo_longitude
+                            site_name, dhv_site_id, geo_latitude, geo_longitude, null [last_flight_date]
                         FROM sites 
                     """), db, params=param)
         return df

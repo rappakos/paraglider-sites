@@ -24,3 +24,19 @@ INSERT OR IGNORE INTO sites (site_name, dhv_site_id, geo_latitude, geo_longitude
 VALUES 
     ('Rammelsberg', 9427, 51.889874886365874, 10.43097291843072 )
 ;
+
+CREATE TABLE IF NOT EXISTS dhv_flights
+(
+    site_name TEXT NOT NULL,
+    IDFlight TEXT NOT NULL,
+    FlightDate TEXT NOT NULL,
+    FlightStartTime TEXT NOT NULL,
+    FKPilot TEXT NOT NULL,
+    Glider TEXT,
+    GliderClassification TEXT,
+    FlightDuration REAL NOT NULL,
+    BestTaskPoints REAL NOT NULL,
+    BestTaskType TEXT NOT NULL,
+    UNIQUE(IDFlight),
+    FOREIGN KEY(site_name) REFERENCES sites(site_name)
+);

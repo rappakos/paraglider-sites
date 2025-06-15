@@ -25,10 +25,11 @@ VALUES
     ('Rammelsberg', 9427, 51.889874886365874, 10.43097291843072 )
 ;
 
+--DROP TABLE dhv_flights;
 CREATE TABLE IF NOT EXISTS dhv_flights
 (
     site_name TEXT NOT NULL,
-    IDFlight TEXT NOT NULL,
+    IDFlight TEXT PRIMARY KEY,
     FlightDate TEXT NOT NULL,
     FlightStartTime TEXT NOT NULL,
     FKPilot TEXT NOT NULL,
@@ -37,6 +38,5 @@ CREATE TABLE IF NOT EXISTS dhv_flights
     FlightDuration REAL NOT NULL,
     BestTaskPoints REAL NOT NULL,
     BestTaskType TEXT NOT NULL,
-    UNIQUE(IDFlight),
     FOREIGN KEY(site_name) REFERENCES sites(site_name)
 );

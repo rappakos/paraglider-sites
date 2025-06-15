@@ -2,10 +2,10 @@
 
 {% set title = name %}
 {% block content %}
-    <div>DHV ID {{data[0].dhv_site_id}}</div>
-    <div>{{data[0].geo_latitude}}, {{data[0].geo_longitude}}</div>
-    <div>flight count</div>
-    <div>last flight date</div>
+    <div>DHV ID: {{data[0].dhv_site_id}}</div>
+    <div>Coords: {{data[0].geo_latitude}}, {{data[0].geo_longitude}}</div>
+    <div>Flights: {{data[0].flight_count}}</div>
+    <div>Last flight: {{data[0].last_flight_date}}</div>
 
 <div>
     <form action="/{{name}}" method="post" class="w3-container " autocomplete="off" >
@@ -22,10 +22,10 @@
         </tr>
         {% for flight in flights %}
         <tr>
-            <td>YYYY-mm-dd</td>
-            <td>12.34</td>
-            <td>01:23:45</td>
+            <td>{{flight.FlightStartTime}}</td>
+            <td>{{flight.BestTaskPoints}}</td>
+            <td>{{flight.FlightDuration}}</td>
         </tr>
         {% endfor %}
-</table>
+    </table>
 {% endblock %}

@@ -11,10 +11,14 @@ logger = logging.getLogger(__name__)
 
 URL = "https://historical-forecast-api.open-meteo.com/v1/forecast" 
 
+TIME_ZONE = "Europe/Berlin"
+START_HOUR = 10
+END_HOUR = 18
 HOURLY_PARAMS = ["temperature_2m", 
                  "dew_point_2m", 
                  "precipitation", 
                  "weather_code", 
+                 "cloud_cover_low",   # Detects Stratus/Fog                 
                  "surface_pressure", 
                  "wind_speed_10m", 
                  "wind_direction_10m", 
@@ -24,7 +28,11 @@ HOURLY_PARAMS = ["temperature_2m",
                  "lifted_index", 
                  "boundary_layer_height", 
                  "direct_radiation", 
-                 "temperature_850hPa", 
+                 "diffuse_radiation", #  Detects Cirrus/Haze
+                 "temperature_950hPa",
+                 "temperature_850hPa",
+                 "wind_speed_950hPa",
+                 "wind_direction_950hPa",             
                  "wind_speed_850hPa", 
                  "wind_direction_850hPa", 
                  "geopotential_height_850hPa"]
@@ -41,11 +49,9 @@ async def refresh_weather_data(geo_lat: float,geo_long:float, elevation:float, s
 	    "start_date": start_date,
 	    "end_date": end_date,
 	    "hourly": HOURLY_PARAMS,
-	    #"timezone": "Europe/Berlin"
-        "timezone": "GMT"
     }
 
-    openmeteo_url = f'{URL}?latitude={params["latitude"]}&longitude={params["longitude"]}&elevation={params["elevation"]}&start_date={params["start_date"]}&end_date={params["end_date"]}&hourly={",".join(params["hourly"])}&timezone={params["timezone"]}'
+    openmeteo_url = f'{URL}?latitude={params["latitude"]}&longitude={params["longitude"]}&elevation={params["elevation"]}&start_date={params["start_date"]}&end_date={params["end_date"]}&hourly={",".join(params["hourly"])}&timezone={TIME_ZONE}'
     res = requests.get(openmeteo_url)
     if res.status_code == 200:
         data = res.json()
@@ -53,8 +59,10 @@ async def refresh_weather_data(geo_lat: float,geo_long:float, elevation:float, s
         logger.info(f"Data keys: {list([k for k in data.keys() if k not in HOURLY_PARAMS])}")
         logger.info(f"Timezone: {data.get('timezone', 'N/A')}, offset: {data.get('utc_offset_seconds', 'N/A')}")
         df = pd.DataFrame(data['hourly'], columns= data['hourly_units'])
+        df['time'] = pd.to_datetime(df['time'])
+        filter_mask = df['time'].dt.hour.between(START_HOUR, END_HOUR)
 
-    return df
+    return df[filter_mask]
 
 
 if __name__ == "__main__":
@@ -62,4 +70,4 @@ if __name__ == "__main__":
     # test - Rammi
     rammi_nw = SiteBase(site_name='Rammelsberg NW', dhv_site_id=9427, geo_latitude=51.889874886365874, geo_longitude=10.43097291843072, elevation=610 )
     weather_data = asyncio.run(refresh_weather_data(rammi_nw.geo_latitude, rammi_nw.geo_longitude, rammi_nw.elevation, '2025-05-01', '2025-05-31'))
-    print(weather_data.tail())
+    print(weather_data.tail(10))

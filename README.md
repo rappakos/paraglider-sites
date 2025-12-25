@@ -28,3 +28,10 @@ Execute as a module `python -m glider_sites_app.tools.flights.dhv_loader`, sampl
 ### openmeteo_loader
 
 Execute as a module `py -m glider_sites_app.tools.weather.openmeteo_loader`, sample used for Rammi
+
+
+## Analysis
+
+### Random forest
+
+Run with `py -m glider_sites_app.analysis.random_forest`

@@ -1,10 +1,29 @@
 # repositories/flights_repository.py
-from sqlalchemy import create_engine, text
 from ..db import DB_NAME
 import aiosqlite
 from pandas import read_sql_query, DataFrame
+from sqlalchemy import create_engine, text
 
-    
+async def load_flight_counts(site_name: str) -> DataFrame:
+    """Load daily flight counts for a site"""
+    engine = create_engine(f'sqlite:///{DB_NAME}')
+    with engine.connect() as db:
+        df = read_sql_query(
+            text("""
+                SELECT 
+                    site_name,
+                    FlightDate as date,
+                    COUNT(*) as flight_count
+                FROM dhv_flights
+                WHERE site_name = :site_name
+                GROUP BY site_name, FlightDate
+            """),
+            db,
+            params={'site_name': site_name}
+        )
+    return df
+
+
 async def get_flights(site_name:str):
     engine = create_engine(f'sqlite:///{DB_NAME}')
     with engine.connect() as db:

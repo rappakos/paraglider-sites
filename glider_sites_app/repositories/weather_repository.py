@@ -2,7 +2,30 @@
 from glider_sites_app.tools.weather.constants import HOURLY_PARAMS_ARCHIVE,HOURLY_PARAMS
 from ..db import DB_NAME
 import aiosqlite
-from pandas import DataFrame
+from pandas import DataFrame, read_sql_query
+from sqlalchemy import create_engine, text
+
+async def load_weather_data(site_name: str) -> DataFrame:
+    """Load weather data for a site"""
+    engine = create_engine(f'sqlite:///{DB_NAME}')
+    with engine.connect() as db:
+        df = read_sql_query(
+            text("""
+                SELECT 
+                    site_name,
+                    DATE(time) as date,
+                    AVG(wind_speed_10m) as avg_wind_speed,
+                    AVG(wind_direction_10m) as avg_wind_direction,
+                    SUM(sunshine_duration) as total_sunshine,
+                    SUM(precipitation) as total_precipitation
+                FROM weather_data
+                WHERE site_name = :site_name
+                GROUP BY site_name, DATE(time)
+            """),
+            db,
+            params={'site_name': site_name}
+        )
+    return df
 
 
 async def save_weather_data(df_weather: DataFrame):

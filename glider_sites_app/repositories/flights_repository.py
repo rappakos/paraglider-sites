@@ -7,34 +7,40 @@ from sqlalchemy import create_engine, text
 async def load_flight_counts(site_name: str) -> DataFrame:
     """Load daily flight counts for a site"""
     engine = create_engine(f'sqlite:///{DB_NAME}')
-    with engine.connect() as db:
-        df = read_sql_query(
-            text("""
-                SELECT 
-                    site_name,
-                    FlightDate as date,
-                    COUNT(*) as flight_count
-                FROM dhv_flights
-                WHERE site_name = :site_name
-                GROUP BY site_name, FlightDate
-            """),
-            db,
-            params={'site_name': site_name}
-        )
-    return df
+    try:
+        with engine.connect() as db:
+            df = read_sql_query(
+                text("""
+                    SELECT 
+                        site_name,
+                        FlightDate as date,
+                        COUNT(*) as flight_count
+                    FROM dhv_flights
+                    WHERE site_name = :site_name
+                    GROUP BY site_name, FlightDate
+                """),
+                db,
+                params={'site_name': site_name}
+            )
+        return df
+    finally:
+        engine.dispose()
 
 
 async def get_flights(site_name:str):
     engine = create_engine(f'sqlite:///{DB_NAME}')
-    with engine.connect() as db:
-        param = {'site_name':site_name}
-        df  = read_sql_query(text(f"""
-                        SELECT 
-                            [IDFlight], [FlightDate], [FlightStartTime], [FKPilot], [Glider], [GliderClassification], [FlightDuration], [BestTaskPoints], [BestTaskType]
-                        FROM dhv_flights f 
-                        WHERE f.site_name=:site_name
-                    """), db, params=param)
-        return df
+    try:
+        with engine.connect() as db:
+            param = {'site_name':site_name}
+            df  = read_sql_query(text(f"""
+                            SELECT 
+                                [IDFlight], [FlightDate], [FlightStartTime], [FKPilot], [Glider], [GliderClassification], [FlightDuration], [BestTaskPoints], [BestTaskType]
+                            FROM dhv_flights f 
+                            WHERE f.site_name=:site_name
+                        """), db, params=param)
+            return df
+    finally:
+        engine.dispose()
 
 async def save_dhv_flights(df_flights:DataFrame):
     columns_to_save = ['IDFlight', 'FlightDate', 'FlightStartTime', 'FKPilot', 

@@ -6,9 +6,10 @@ from pandas import read_sql_query, DataFrame
 
 async def get_stats():  
     engine = create_engine(f'sqlite:///{DB_NAME}?charset=utf8')
-    with engine.connect() as db:
-        param = {}
-        df  = read_sql_query(text(f"""
+    try:
+        with engine.connect() as db:
+            param = {}
+            df  = read_sql_query(text(f"""
     SELECT 
         s.site_name, s.dhv_site_id, s.geo_latitude, s.geo_longitude, s.elevation,
         f.last_flight_date, f.flight_count,
@@ -25,4 +26,6 @@ async def get_stats():
         GROUP BY site_name
     ) w ON w.site_name = s.site_name                               
                     """), db, params=param)
-        return df
+            return df
+    finally:
+        engine.dispose()

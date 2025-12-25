@@ -8,23 +8,26 @@ from sqlalchemy import create_engine, text
 async def load_weather_data(site_name: str) -> DataFrame:
     """Load weather data for a site"""
     engine = create_engine(f'sqlite:///{DB_NAME}')
-    with engine.connect() as db:
-        df = read_sql_query(
-            text("""SELECT 
-                    site_name,
-                    DATE(time) as date,
-                    time,
-                    wind_speed_10m,
-                    wind_direction_10m,
-                    wind_gusts_10m,
-                    sunshine_duration,
-                    precipitation
-                FROM weather_data
-                WHERE site_name = :site_name """),
-            db,
-            params={'site_name': site_name}
-        )
-    return df
+    try:
+        with engine.connect() as db:
+            df = read_sql_query(
+                text("""SELECT 
+                        site_name,
+                        DATE(time) as date,
+                        time,
+                        wind_speed_10m,
+                        wind_direction_10m,
+                        wind_gusts_10m,
+                        sunshine_duration,
+                        precipitation
+                    FROM weather_data
+                    WHERE site_name = :site_name """),
+                db,
+                params={'site_name': site_name}
+            )
+        return df
+    finally:
+        engine.dispose()
 
 
 async def save_weather_data(df_weather: DataFrame):

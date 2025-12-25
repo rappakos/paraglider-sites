@@ -10,18 +10,17 @@ async def load_weather_data(site_name: str) -> DataFrame:
     engine = create_engine(f'sqlite:///{DB_NAME}')
     with engine.connect() as db:
         df = read_sql_query(
-            text("""
-                SELECT 
+            text("""SELECT 
                     site_name,
                     DATE(time) as date,
-                    AVG(wind_speed_10m) as avg_wind_speed,
-                    AVG(wind_direction_10m) as avg_wind_direction,
-                    SUM(sunshine_duration) as total_sunshine,
-                    SUM(precipitation) as total_precipitation
+                    time,
+                    wind_speed_10m,
+                    wind_direction_10m,
+                    wind_gusts_10m,
+                    sunshine_duration,
+                    precipitation
                 FROM weather_data
-                WHERE site_name = :site_name
-                GROUP BY site_name, DATE(time)
-            """),
+                WHERE site_name = :site_name """),
             db,
             params={'site_name': site_name}
         )

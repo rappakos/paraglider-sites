@@ -19,7 +19,8 @@ async def load_weather_data(site_name: str) -> DataFrame:
                         wind_direction_10m,
                         wind_gusts_10m,
                         sunshine_duration,
-                        precipitation
+                        precipitation,
+                        cloud_cover_low
                     FROM weather_data
                     WHERE site_name = :site_name """),
                 db,

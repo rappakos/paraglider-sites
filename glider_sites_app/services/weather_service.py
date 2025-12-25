@@ -50,4 +50,4 @@ async def sync_weather(site_name:str):
 
 if __name__=='__main__':
     import asyncio
-    asyncio.run(sync_weather('Rammelsberg NW'))
+    asyncio.run(sync_weather('Königszinne'))

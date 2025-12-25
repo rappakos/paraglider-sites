@@ -17,8 +17,14 @@ This project has been migrated to **FastAPI** with added machine learning capabi
 
 Execute as module to init: `py -m glider_sites_app.db`
 
+Complete reset by `rm glider_sites_app.db`
+
 ## Tools
 
 ### dhv_loader
 
-Execute as a module `python -m glider_sites_app.tools.flights.dhv_loader`
+Execute as a module `python -m glider_sites_app.tools.flights.dhv_loader`, sample used for Rammi NW
+
+### openmeteo_loader
+
+Execute as a module `py -m glider_sites_app.tools.weather.openmeteo_loader`, sample used for Rammi

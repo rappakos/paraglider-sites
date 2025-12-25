@@ -22,12 +22,12 @@ def discretize_data(df):
     # --- 1. WIND STATE (The Mechanical Energy) ---
     # Thresholds based on your Random Forest findings
     # 0-5: Too weak (Parawaiting)
-    # 5-25: Perfect
-    # 25-30: Strong (Experts only)
+    # 5-15: Perfect
+    # 15-25: Strong (Experts only)
     # >30: Nuke (Danger)
     data['Wind_State'] = pd.cut(
         df['avg_wind_speed'], 
-        bins=[-np.inf, 5, 25, 30, np.inf], 
+        bins=[-np.inf, 5, 15, 25, np.inf], 
         labels=['Calm', 'Perfect', 'Strong', 'Nuke']
     )
 
@@ -44,11 +44,11 @@ def discretize_data(df):
     
     # --- 3. ALIGNMENT (The Geometry) ---
     # Your COS metric (1.0 = Perfect, 0.0 = Cross)
-    # > 0.8: Good launch
+    # > 0.8: Good launch (45 deg -> sqrt 2 / 2 is 0.707)
     # < 0.5: Unflyable crosswind
     data['Alignment_State'] = pd.cut(
         df['avg_wind_alignment'], 
-        bins=[-np.inf, 0.5, 0.8, np.inf], 
+        bins=[-np.inf,0.5 , 0.8, np.inf], 
         labels=['Cross', 'Okay', 'Perfect']
     )
 
@@ -84,6 +84,7 @@ def discretize_data(df):
     
     # XC Potential (Optional: Define based on km or duration)
     # Simple proxy: If distinct pilots > 5, it's a "Good Day"
+    # TODO we need to change this to XC points
     data['Day_Potential'] = df['flight_count'].apply(lambda x: 'High' if x > 10 else 'Low')
 
     return data.dropna() # BNs hate NaNs
@@ -120,7 +121,7 @@ def build_and_train_network(df_discrete):
     # We must rename our DF columns to match these node names exactly.
     # (Mapping logic is below in the main execution block)
     
-    print("Training Bayesian Network...")
+    logger.info("Training Bayesian Network...")
     model.fit(df_discrete, estimator=MaximumLikelihoodEstimator)
     
     return model
@@ -167,8 +168,8 @@ async def flight_predictor(site_name: str, main_direction: int):
     # 5. Query the Model (Inference)
     infer = VariableElimination(model)
 
-    print("\n=== SCENARIO 1: The 'Windy but Aligned' Day ===")
-    print("Wind: Strong (25-30kmh), Alignment: Perfect, Lapse: Stable")
+    logger.info("\n=== SCENARIO 1: The 'Windy but Aligned' Day ===")
+    logger.info("Wind: Strong, Alignment: Perfect, Lapse: Stable")
     q1 = infer.query(
         variables=['Is_Flyable', 'XC_Result'], 
         evidence={
@@ -177,10 +178,10 @@ async def flight_predictor(site_name: str, main_direction: int):
             'Thermal_Quality': 'Stable'
         }
     )
-    print(q1)
+    logger.info(q1)
 
-    print("\n=== SCENARIO 2: The 'Perfect Thermal' Day ===")
-    print("Wind: Perfect, Lapse: Booming, Ceiling: High")
+    logger.info("\n=== SCENARIO 2: The 'Perfect Thermal' Day ===")
+    logger.info("Wind: Perfect, Lapse: Booming, Ceiling: High")
     q2 = infer.query(
         variables=['XC_Result'], 
         evidence={
@@ -190,13 +191,12 @@ async def flight_predictor(site_name: str, main_direction: int):
             'Is_Flyable': 'Yes' # We assume we launched
         }
     )
-    print(q2)
-
+    logger.info(q2)
 
 
 if __name__ == '__main__':
     import asyncio
     
     asyncio.run(flight_predictor('Rammelsberg NW', 315))
-    #asyncio.run(flight_predictor('Königszinne', 270))
+    asyncio.run(flight_predictor('Königszinne', 270))
     #asyncio.run(flight_predictor('Börry', 180))

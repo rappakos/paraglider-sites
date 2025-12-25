@@ -20,7 +20,11 @@ async def load_weather_data(site_name: str) -> DataFrame:
                         wind_gusts_10m,
                         sunshine_duration,
                         precipitation,
-                        cloud_cover_low
+                        cloud_cover_low,
+                        -- thermal indication
+                        boundary_layer_height, -- pre 2022 ?
+                        temperature_2m, -- post 2022 ?
+                        dew_point_2m
                     FROM weather_data
                     WHERE site_name = :site_name """),
                 db,

@@ -13,6 +13,18 @@ from glider_sites_app.repositories.flights_repository import load_flight_counts
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+def get_blh(row) -> float:
+    if row['date'] < '2022-01-01' or row['boundary_layer_height'] > 100:
+        return row['boundary_layer_height']
+    else:
+        spread = (row['temperature_2m'] - row['dew_point_2m'])
+        if spread < 0:
+            return 0.
+        # do not add elevation!
+        return spread * 125.
+
+
 def aggregate_weather(raw_weather_df: pd.DataFrame, main_direction: int) -> pd.DataFrame:
     """
     Aggregate hourly weather data to daily metrics
@@ -33,6 +45,9 @@ def aggregate_weather(raw_weather_df: pd.DataFrame, main_direction: int) -> pd.D
     wind_dir_diff = np.radians(main_direction - raw_weather_df['wind_direction_10m'])
     raw_weather_df['wind_alignment'] = np.cos(wind_dir_diff)
     
+    #
+    raw_weather_df['blh'] =raw_weather_df.apply(get_blh,axis=1)
+
     # Aggregate by date
     daily_weather = raw_weather_df.groupby('date').agg({
         'wind_speed_10m': 'mean',           # AVG wind strength
@@ -40,7 +55,8 @@ def aggregate_weather(raw_weather_df: pd.DataFrame, main_direction: int) -> pd.D
         'wind_alignment': 'mean',           # AVG wind alignment with main direction
         'precipitation': 'sum',             # SUM precipitation
         'sunshine_duration': 'sum',          # SUM sunshine
-        'cloud_cover_low': 'mean'
+        'cloud_cover_low': 'mean',
+        'blh': 'max'
     }).reset_index()
     
     # Rename columns for clarity
@@ -51,7 +67,8 @@ def aggregate_weather(raw_weather_df: pd.DataFrame, main_direction: int) -> pd.D
         'avg_wind_alignment',
         'total_precipitation',
         'total_sunshine',
-        'avg_cloud_cover'
+        'avg_cloud_cover',
+        'max_boundary_layer_height'
     ]
     
     logger.info(f"Aggregated {len(raw_weather_df)} hourly records to {len(daily_weather)} daily records")
@@ -115,7 +132,15 @@ async def train_flight_predictor(site_name: str, main_direction: int, type: Lite
         return None
     
     # Features and target
-    features = ['avg_wind_speed', 'avg_wind_alignment', 'max_wind_gust','avg_cloud_cover','total_sunshine','total_precipitation']
+    features = [
+        'avg_wind_speed', 
+        'avg_wind_alignment', 
+        'max_wind_gust',
+        #'avg_cloud_cover',
+        'total_sunshine',
+        'total_precipitation',
+        #'max_boundary_layer_height' # the physics ?!
+        ]
     X = df[features]
     y = np.log1p(df['flight_count']) if type=='regressor' else df['flight_count'] > 0
     
@@ -129,13 +154,13 @@ async def train_flight_predictor(site_name: str, main_direction: int, type: Lite
     
     # Train model
     model = RandomForestRegressor(
-        n_estimators=200,
+        n_estimators=100,
         max_depth=10,
         random_state=42,
         n_jobs=-1
     ) if type=='regressor' else RandomForestClassifier(
         #class_weight='balanced',
-        n_estimators=200,
+        n_estimators=100,
         max_depth=10,
         random_state=42,
         n_jobs=-1                
@@ -201,4 +226,4 @@ if __name__ == '__main__':
     import asyncio
     
     asyncio.run(train_flight_predictor('Königszinne', 270, 'classifier'))
-    asyncio.run(train_flight_predictor('Rammelsberg NW', 315, 'regressor'))
+    asyncio.run(train_flight_predictor('Rammelsberg NW', 315, 'classifier'))

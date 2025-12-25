@@ -41,6 +41,9 @@ async def sync_weather(site_name:str):
     end_date = get_end_date(start_date)
 
     df = await refresh_weather_data(lat, lng, elev, start_date, end_date)
+    if df is None or df.empty:
+        return 
+
     df['site_name'] = site_name
     await save_weather_data(df)
 

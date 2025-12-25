@@ -15,6 +15,9 @@ async def save_weather_data(df_weather: DataFrame):
 
     df_to_save = df_weather[columns_to_save].copy()
     df_to_save['time'] = df_to_save['time'].dt.strftime('%Y-%m-%d %H:%M:%S')        
+    # special case
+    df_to_save[['boundary_layer_height']] = df_to_save[['boundary_layer_height']].fillna(0).infer_objects(copy=False)
+
 
     sql =f"""INSERT OR IGNORE INTO weather_data
             ({', '.join(columns_to_save)})

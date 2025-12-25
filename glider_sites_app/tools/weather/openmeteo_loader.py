@@ -29,14 +29,17 @@ async def refresh_weather_data(geo_lat: float,geo_long:float, elevation:float, s
     res = requests.get(openmeteo_url)
     if res.status_code == 200:
         data = res.json()
-        logger.info(f"Weather data fetched for lat={geo_lat}, lon={geo_long} from {start_date} to {end_date}")
+        logger.info(f"{len(data['hourly']['time'])} weather data rows fetched for lat={geo_lat:.3}, lon={geo_long:.3} from {start_date} to {end_date}")
         logger.debug(f"Data keys: {list([k for k in data.keys() if k not in HOURLY_PARAMS])}")
         logger.debug(f"Timezone: {data.get('timezone', 'N/A')}, offset: {data.get('utc_offset_seconds', 'N/A')}")
         df = pd.DataFrame(data['hourly'], columns= data['hourly_units'])
         df['time'] = pd.to_datetime(df['time'])
         filter_mask = df['time'].dt.hour.between(START_HOUR, END_HOUR)
 
-    return df[filter_mask]
+        return df[filter_mask]
+    else:
+        logging.warning(f"Failed with {res.status_code}:{res}")
+        return None
 
 
 if __name__ == "__main__":

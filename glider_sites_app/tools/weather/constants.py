@@ -36,7 +36,7 @@ HOURLY_PARAMS = ["temperature_2m", # in archive
                  "wind_direction_10m",  # in archive
                  "wind_gusts_10m",  # in archive
                  "sunshine_duration",  # in archive
-                 "boundary_layer_height",  # in archive
+                 "boundary_layer_height",  # in archive # seems to be None ?!
                  "direct_radiation",  # in archive
                  "diffuse_radiation", #  Detects Cirrus/Haze ,  in archive 
                  "cape", 

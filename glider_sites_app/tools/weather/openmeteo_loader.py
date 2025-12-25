@@ -77,8 +77,8 @@ async def refresh_weather_data(geo_lat: float,geo_long:float, elevation:float, s
     if res.status_code == 200:
         data = res.json()
         logger.info(f"Weather data fetched for lat={geo_lat}, lon={geo_long} from {start_date} to {end_date}")
-        logger.info(f"Data keys: {list([k for k in data.keys() if k not in HOURLY_PARAMS])}")
-        logger.info(f"Timezone: {data.get('timezone', 'N/A')}, offset: {data.get('utc_offset_seconds', 'N/A')}")
+        logger.debug(f"Data keys: {list([k for k in data.keys() if k not in HOURLY_PARAMS])}")
+        logger.debug(f"Timezone: {data.get('timezone', 'N/A')}, offset: {data.get('utc_offset_seconds', 'N/A')}")
         df = pd.DataFrame(data['hourly'], columns= data['hourly_units'])
         df['time'] = pd.to_datetime(df['time'])
         filter_mask = df['time'].dt.hour.between(START_HOUR, END_HOUR)
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     rammi_nw = SiteBase(site_name='Rammelsberg NW', dhv_site_id=9427, geo_latitude=51.889874886365874, geo_longitude=10.43097291843072, elevation=610 )
     d = '2018-01-01'
     weather_data = asyncio.run(refresh_weather_data(rammi_nw.geo_latitude, rammi_nw.geo_longitude, rammi_nw.elevation, d,d))
-    print(weather_data.tail(10))    
+    print(weather_data.tail())    
     d = '2022-01-01'
     weather_data = asyncio.run(refresh_weather_data(rammi_nw.geo_latitude, rammi_nw.geo_longitude, rammi_nw.elevation, d,d))
-    print(weather_data.tail(10))
+    print(weather_data.tail())

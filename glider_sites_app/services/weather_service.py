@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 def get_end_date(start_date:str) -> str:
     end_date_obj = min(
-            datetime.strptime(start_date,'%Y-%m-%d') + timedelta(days=365),
+            datetime(datetime.strptime(start_date,'%Y-%m-%d').year,12,31),
             datetime.now() + timedelta(days=-5)
     )
     return end_date_obj.strftime('%Y-%m-%d')
@@ -28,13 +28,13 @@ async def sync_weather(site_name:str):
         return
 
     lat, lng, elev = site_info.iloc[0]['geo_latitude'], site_info.iloc[0]['geo_longitude'], site_info.iloc[0]['elevation']
-    start_date = MIN_DATE # TODO extend get_stats() with last_weather
+    start_date = site_info.iloc[0]['last_weather_time'] or MIN_DATE
     end_date = get_end_date(start_date)
 
     df = await refresh_weather_data(lat, lng, elev, start_date, end_date)
 
     # TODO save
-    logger.info(df.head())
+    #logger.info(df.head())
 
     return df
 

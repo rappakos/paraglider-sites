@@ -46,3 +46,32 @@ CREATE TABLE IF NOT EXISTS dhv_flights
     BestTaskType TEXT NOT NULL,
     FOREIGN KEY(site_name) REFERENCES sites(site_name)
 );
+
+CREATE TABLE IF NOT EXISTS weather_data
+(
+    site_name TEXT NOT NULL,
+    time TEXT NOT NULL,
+    temperature_2m REAL NOT NULL,
+    dew_point_2m REAL NOT NULL,
+    precipitation REAL NOT NULL,
+    weather_code REAL NOT NULL,
+    cloud_cover_low REAL NOT NULL,            
+    surface_pressure REAL NOT NULL,
+    wind_speed_10m REAL NOT NULL,
+    wind_direction_10m REAL NOT NULL,
+    wind_gusts_10m REAL NOT NULL,
+    sunshine_duration REAL NOT NULL,
+    boundary_layer_height REAL NOT NULL,
+    direct_radiation REAL NOT NULL,
+    diffuse_radiation REAL NOT NULL,
+    cape REAL NULL, 
+    lifted_index REAL NULL,                  
+    temperature_950hPa REAL NULL, 
+    temperature_850hPa REAL NULL, 
+    wind_speed_950hPa REAL NULL, 
+    wind_direction_950hPa REAL NULL,             
+    wind_speed_850hPa REAL NULL,  
+    wind_direction_850hPa REAL NULL,  
+    geopotential_height_850hPa REAL NULL, 
+    FOREIGN KEY(site_name) REFERENCES sites(site_name)
+)

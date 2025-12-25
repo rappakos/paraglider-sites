@@ -10,9 +10,12 @@ async def get_stats():
         param = {}
         df  = read_sql_query(text(f"""
                         SELECT 
-                            s.site_name, s.dhv_site_id, s.geo_latitude, s.geo_longitude, s.elevation, max(f.FlightDate) [last_flight_date], count(f.IDFlight) [flight_count]
+                            s.site_name, s.dhv_site_id, s.geo_latitude, s.geo_longitude, s.elevation
+                                  , max(f.FlightDate) [last_flight_date], count(f.IDFlight) [flight_count]
+                                  , max(w.time) [last_weather_time]
                         FROM sites s
                         left join dhv_flights f on f.site_name=s.site_name
+                        left join weather_data w on w.site_name=s.site_name
                         GROUP BY s.site_name, s.dhv_site_id, s.geo_latitude, s.geo_longitude, s.elevation                                  
                     """), db, params=param)
         return df

@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS dhv_flights
     FOREIGN KEY(site_name) REFERENCES sites(site_name)
 );
 
+--DROP TABLE weather_data;
 CREATE TABLE IF NOT EXISTS weather_data
 (
     site_name TEXT NOT NULL,
@@ -73,5 +74,11 @@ CREATE TABLE IF NOT EXISTS weather_data
     wind_speed_850hPa REAL NULL,  
     wind_direction_850hPa REAL NULL,  
     geopotential_height_850hPa REAL NULL, 
-    FOREIGN KEY(site_name) REFERENCES sites(site_name)
-)
+    FOREIGN KEY(site_name) REFERENCES sites(site_name),
+     PRIMARY KEY (site_name, time)
+);
+
+CREATE INDEX IF NOT EXISTS idx_dhv_flights_site_name ON dhv_flights(site_name);
+CREATE INDEX IF NOT EXISTS idx_dhv_flights_flight_date ON dhv_flights(FlightDate);
+CREATE INDEX IF NOT EXISTS idx_weather_data_site_name ON weather_data(site_name);
+CREATE INDEX IF NOT EXISTS idx_weather_data_time ON weather_data(time);

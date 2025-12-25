@@ -9,13 +9,20 @@ async def get_stats():
     with engine.connect() as db:
         param = {}
         df  = read_sql_query(text(f"""
-                        SELECT 
-                            s.site_name, s.dhv_site_id, s.geo_latitude, s.geo_longitude, s.elevation
-                                  , max(f.FlightDate) [last_flight_date], count(f.IDFlight) [flight_count]
-                                  , max(w.time) [last_weather_time]
-                        FROM sites s
-                        left join dhv_flights f on f.site_name=s.site_name
-                        left join weather_data w on w.site_name=s.site_name
-                        GROUP BY s.site_name, s.dhv_site_id, s.geo_latitude, s.geo_longitude, s.elevation                                  
+    SELECT 
+        s.site_name, s.dhv_site_id, s.geo_latitude, s.geo_longitude, s.elevation,
+        f.last_flight_date, f.flight_count,
+        w.last_weather_time
+    FROM sites s
+    LEFT JOIN (
+        SELECT site_name, MAX(FlightDate) as last_flight_date, COUNT(DISTINCT IDFlight) as flight_count
+        FROM dhv_flights
+        GROUP BY site_name
+    ) f ON f.site_name = s.site_name
+    LEFT JOIN (
+        SELECT site_name, MAX(time) as last_weather_time
+        FROM weather_data
+        GROUP BY site_name
+    ) w ON w.site_name = s.site_name                               
                     """), db, params=param)
         return df

@@ -21,12 +21,13 @@ async def load_weather_data(site_name: str) -> DataFrame:
                         sunshine_duration,
                         precipitation,
                         cloud_cover_low,
-                        -- thermal indication
+                        -- physics
                         boundary_layer_height, -- pre 2022 ?
                         temperature_2m, -- post 2022 ?
-                        dew_point_2m
+                        dew_point_2m,
+                        temperature_850hPa
                     FROM weather_data
-                    WHERE site_name = :site_name """),
+                    WHERE site_name = :site_name and DATE(time) >= '2022-01-01'  """),
                 db,
                 params={'site_name': site_name}
             )

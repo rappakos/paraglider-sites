@@ -47,28 +47,32 @@ def aggregate_weather(raw_weather_df: pd.DataFrame, main_direction: int) -> pd.D
     
     #
     raw_weather_df['blh'] =raw_weather_df.apply(get_blh,axis=1)
+    raw_weather_df['lability']=raw_weather_df['temperature_2m'] - raw_weather_df['temperature_850hPa']
 
     # Aggregate by date
     daily_weather = raw_weather_df.groupby('date').agg({
-        'wind_speed_10m': 'mean',           # AVG wind strength
+        'wind_speed_10m': ['mean', 'min'],  # AVG and MIN wind strength
         'wind_gusts_10m': 'max',            # MAX wind gust
         'wind_alignment': 'mean',           # AVG wind alignment with main direction
         'precipitation': 'sum',             # SUM precipitation
-        'sunshine_duration': 'sum',          # SUM sunshine
+        'sunshine_duration': 'sum',         # SUM sunshine
         'cloud_cover_low': 'mean',
-        'blh': 'max'
+        'blh': 'max',
+        'lability': 'max'
     }).reset_index()
     
-    # Rename columns for clarity
+    # Flatten multi-index columns
     daily_weather.columns = [
         'date',
         'avg_wind_speed',
+        'min_wind_speed',
         'max_wind_gust',
         'avg_wind_alignment',
         'total_precipitation',
         'total_sunshine',
         'avg_cloud_cover',
-        'max_boundary_layer_height'
+        'max_boundary_layer_height',
+        'max_lapse_rate'
     ]
     
     logger.info(f"Aggregated {len(raw_weather_df)} hourly records to {len(daily_weather)} daily records")
@@ -117,6 +121,7 @@ async def prepare_training_data(site_name: str, main_direction: int) -> pd.DataF
     logger.info(f"Merged data: {len(merged_df)} days with complete data")
     logger.info(f"Flight days: {(merged_df['flight_count'] > 0).sum()}")
     logger.info(f"Weekend days: {merged_df['is_weekend'].sum()}, Weekdays: {(1-merged_df['is_weekend']).sum()}")
+    logger.info(f"Rainy days: {(merged_df['total_precipitation']>0).sum()}")
     
     return merged_df
 
@@ -136,10 +141,12 @@ async def train_flight_predictor(site_name: str, main_direction: int, type: Lite
         'avg_wind_speed', 
         'avg_wind_alignment', 
         'max_wind_gust',
+        'min_wind_speed',
         #'avg_cloud_cover',
         'total_sunshine',
         'total_precipitation',
-        #'max_boundary_layer_height' # the physics ?!
+        #'max_boundary_layer_height', 
+        'max_lapse_rate'
         ]
     X = df[features]
     y = np.log1p(df['flight_count']) if type=='regressor' else df['flight_count'] > 0
@@ -154,13 +161,13 @@ async def train_flight_predictor(site_name: str, main_direction: int, type: Lite
     
     # Train model
     model = RandomForestRegressor(
-        n_estimators=100,
+        n_estimators=200,
         max_depth=10,
         random_state=42,
         n_jobs=-1
     ) if type=='regressor' else RandomForestClassifier(
         #class_weight='balanced',
-        n_estimators=100,
+        n_estimators=200,
         max_depth=10,
         random_state=42,
         n_jobs=-1                
@@ -227,3 +234,4 @@ if __name__ == '__main__':
     
     asyncio.run(train_flight_predictor('Königszinne', 270, 'classifier'))
     asyncio.run(train_flight_predictor('Rammelsberg NW', 315, 'classifier'))
+    asyncio.run(train_flight_predictor('Börry', 180, 'classifier'))

@@ -9,7 +9,7 @@ requests
 pydantic
 python-multipart
 scikit-learn
-pgmpy
+pgmpy>=0.1.25
 scipy
 #networkx
 #matplotlib

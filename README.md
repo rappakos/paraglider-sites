@@ -35,3 +35,7 @@ Execute as a module `py -m glider_sites_app.tools.weather.openmeteo_loader`, sam
 ### Random forest
 
 Run with `py -m glider_sites_app.analysis.random_forest`
+
+### Bayes network
+
+Run with `py -m glider_sites_app.analysis.bayes_network`

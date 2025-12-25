@@ -15,14 +15,20 @@
 CREATE TABLE IF NOT EXISTS sites 
 (
     site_name TEXT PRIMARY KEY, 
-    dhv_site_id INT NOT NULL, 
+    dhv_site_id INT NULL, 
     geo_latitude REAL,
-    geo_longitude REAL
+    geo_longitude REAL,
+    elevation REAL
 );
 
-INSERT OR IGNORE INTO sites (site_name, dhv_site_id, geo_latitude, geo_longitude)
+INSERT OR IGNORE INTO sites (site_name, dhv_site_id, geo_latitude, geo_longitude, elevation)
 VALUES 
-    ('Rammelsberg', 9427, 51.889874886365874, 10.43097291843072 )
+    ('Börry', 9403, 52.046285258531405, 9.452555739764259, 200 )
+    ,('Königszinne', 11489, 51.9778622956024, 9.52602605319744, 240 )    
+    ,('Rammelsberg NW', 9427, 51.889874886365874, 10.43097291843072, 610 )
+    ,('Rammelsberg SW', 9427, 51.8873305210640, 10.429834748486158, 610 )
+    
+    
 ;
 
 --DROP TABLE dhv_flights;

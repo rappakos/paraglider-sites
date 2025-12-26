@@ -24,7 +24,8 @@ def get_start_date(max_date:str) -> str:
 
 def get_end_date(start_date:str) -> str:
     end_date_obj = min(
-            datetime(datetime.strptime(start_date,'%Y-%m-%d').year,12,31),
+            #datetime(datetime.strptime(start_date,'%Y-%m-%d').year,12,31),
+            datetime.strptime(start_date,'%Y-%m-%d') + timedelta(days=180),
             datetime.now() + timedelta(days=-5)
     )
     return end_date_obj.strftime('%Y-%m-%d')
@@ -138,4 +139,4 @@ async def sync_weather(site_name:str):
 
 if __name__=='__main__':
     import asyncio
-    asyncio.run(sync_weather('Börry'))
+    asyncio.run(sync_weather('Porta'))

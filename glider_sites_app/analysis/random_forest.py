@@ -118,6 +118,7 @@ async def train_flight_predictor(site_name: str, main_direction: int, type: Lite
 if __name__ == '__main__':
     import asyncio
     
-    asyncio.run(train_flight_predictor('Königszinne', 270, 'classifier'))
+    #asyncio.run(train_flight_predictor('Königszinne', 270, 'classifier'))
     asyncio.run(train_flight_predictor('Rammelsberg NW', 315, 'classifier'))
-    asyncio.run(train_flight_predictor('Börry', 180, 'classifier'))
+    #asyncio.run(train_flight_predictor('Börry', 180, 'classifier'))
+    #asyncio.run(train_flight_predictor('Porta', 195, 'classifier'))

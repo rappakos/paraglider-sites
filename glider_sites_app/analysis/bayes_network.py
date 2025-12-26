@@ -94,6 +94,8 @@ def discretize_data(df):
         labels=['Light', 'Drift', 'Strong']
     )
 
+    data['Social_Window'] = df['is_workingday'].map({1: 'Low', 0: 'High'})
+
 
     # --- TARGETS (What we want to predict) ---
     # Binary Flyability
@@ -117,7 +119,7 @@ def build_and_train_network(df_discrete):
         # Safety depends on Wind Speed and Turbulence
         ('Wind_State',       'Launch_Safety'),
         ('Turbulence_State', 'Launch_Safety'),
-        ('Wind_850_State',   'Shear_State'),   # 850 Wind drives Shear
+        #('Wind_850_State',   'Shear_State'),   # 850 Wind drives Shear
         
         # Mechanics depends on Geometry (Alignment)
         ('Alignment_State',  'Site_Mechanics'),
@@ -125,12 +127,13 @@ def build_and_train_network(df_discrete):
         # Lift depends on Lapse Rate and Ceiling
         ('Thermal_Quality',  'Lift_Potential'),
         ('Ceiling_State',    'Lift_Potential'),
-        ('Shear_State',      'Lift_Potential'), # High shear kills thermals
+        #('Shear_State',      'Lift_Potential'), # High shear kills thermals
 
         # --- LAYER 2: Intermediate to Decisions ---
-        # Can we fly? (Requires Safety AND Mechanics)
+        # Can we fly? (Requires Safety AND Mechanics AND Pilots)
         ('Launch_Safety',    'Is_Flyable'),
         ('Site_Mechanics',   'Is_Flyable'),
+        ('Social_Window',   'Is_Flyable'),
 
         # --- LAYER 3: Output ---
         # How good is the flight? (Requires Flyability AND Lift)
@@ -152,7 +155,7 @@ def build_and_train_network(df_discrete):
 async def flight_predictor(site_name: str, main_direction: int):
 
     # Prepare data
-    df = await prepare_training_data(site_name,main_direction)
+    df = await prepare_training_data(site_name,main_direction,use_workingdays=False)
     
     if len(df) < 50:
         logger.error(f"Insufficient data: only {len(df)} days available")
@@ -192,7 +195,8 @@ async def flight_predictor(site_name: str, main_direction: int):
             'Wind_State': 'Strong', 
             'Alignment_State': 'Perfect', 
             'Thermal_Quality': 'Stable',
-            'Wind_850_State': 'Strong'
+            #'Wind_850_State': 'Strong',
+            'Social_Window': 'High' # assume weekend
         }
     )
     logger.info(q1)
@@ -205,7 +209,7 @@ async def flight_predictor(site_name: str, main_direction: int):
             'Wind_State': 'Perfect', 
             'Thermal_Quality': 'Booming', 
             'Ceiling_State': 'High',
-            'Wind_850_State': 'Light',
+            #'Wind_850_State': 'Light',
             'Is_Flyable': 'Yes' # We assume we launched
         }
     )
@@ -215,6 +219,6 @@ async def flight_predictor(site_name: str, main_direction: int):
 if __name__ == '__main__':
     import asyncio
     
-    asyncio.run(flight_predictor('Rammelsberg NW', 315))
+    #asyncio.run(flight_predictor('Rammelsberg NW', 315))
     #asyncio.run(flight_predictor('Königszinne', 270))
-    #asyncio.run(flight_predictor('Börry', 180))
+    asyncio.run(flight_predictor('Börry', 180))

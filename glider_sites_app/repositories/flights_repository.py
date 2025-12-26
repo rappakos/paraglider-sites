@@ -15,9 +15,13 @@ async def load_flight_counts(site_name: str) -> DataFrame:
                         site_name,
                         FlightDate as date,
                         COUNT(*) as flight_count,
-                        MAX(BestTaskPoints) as max_daily_score
-                        --get the type of the flight with MAX(BestTaskPoints)
-                    FROM dhv_flights
+                        (SELECT FKPilot 
+                         FROM dhv_flights f2 
+                         WHERE f2.site_name = f.site_name 
+                           AND f2.FlightDate = f.FlightDate 
+                         ORDER BY BestTaskPoints DESC 
+                         LIMIT 1) as best_pilot_id
+                    FROM dhv_flights f
                     WHERE site_name = :site_name
                     GROUP BY site_name, FlightDate
                 """),
@@ -27,6 +31,24 @@ async def load_flight_counts(site_name: str) -> DataFrame:
         return df
     finally:
         engine.dispose()
+
+async def pilot_stats() -> DataFrame:
+    """Load pilot statistics"""
+    engine = create_engine(f'sqlite:///{DB_NAME}')
+    try:
+        with engine.connect() as db:
+            df  = read_sql_query(text(f"""
+                            SELECT 
+                                FKPilot,
+                                MAX(BestTaskPoints) as best_score
+                            FROM dhv_flights
+                            GROUP BY FKPilot
+                            ORDER BY best_score DESC
+                        """), db)
+            return df
+    finally:
+        engine.dispose()
+
 
 
 async def get_flights(site_name:str):

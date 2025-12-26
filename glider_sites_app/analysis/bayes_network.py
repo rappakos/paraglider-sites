@@ -78,14 +78,34 @@ def discretize_data(df):
         labels=['Low', 'Average', 'High']
     )
 
-    # --- 6. TARGETS (What we want to predict) ---
+    # Create the 'Shear' variable (Absolute difference in speed)
+    # Ideally vector difference, but scalar diff is a good proxy
+    df['wind_shear'] = (df['wind_speed_850hPa'] - df['avg_wind_speed']).abs()
+
+    data['Shear_State'] = pd.cut(
+        df['wind_shear'],
+        bins=[-np.inf, 10, 20, np.inf],
+        labels=['Low', 'Moderate', 'High'] # >20km/h diff usually kills thermals
+    )
+
+    data['Wind_850_State'] = pd.cut(
+        df['wind_speed_850hPa'],
+        bins=[-np.inf, 15, 30, np.inf],
+        labels=['Light', 'Drift', 'Strong']
+    )
+
+
+    # --- TARGETS (What we want to predict) ---
     # Binary Flyability
     data['Is_Flyable'] = df['flight_count'].apply(lambda x: 'Yes' if x > 0 else 'No')
     
-    # XC Potential (Optional: Define based on km or duration)
-    # Simple proxy: If distinct pilots > 5, it's a "Good Day"
-    # TODO we need to change this to XC points
-    data['Day_Potential'] = df['flight_count'].apply(lambda x: 'High' if x > 10 else 'Low')
+    # --- NEW: XC POTENTIAL (The True Target) ---
+    # Assuming 'max_daily_score' is the best flight of the day in points/km
+    data['XC_Result'] = pd.cut(
+        df['max_daily_score'].fillna(0), # 0 if nobody flew
+        bins=[-np.inf, 5, 15, 50, np.inf], 
+        labels=['A-Sled', 'B-Local', 'C-XC', 'D-Hammer']
+    )
 
     return data.dropna() # BNs hate NaNs
 
@@ -97,6 +117,7 @@ def build_and_train_network(df_discrete):
         # Safety depends on Wind Speed and Turbulence
         ('Wind_State',       'Launch_Safety'),
         ('Turbulence_State', 'Launch_Safety'),
+        ('Wind_850_State',   'Shear_State'),   # 850 Wind drives Shear
         
         # Mechanics depends on Geometry (Alignment)
         ('Alignment_State',  'Site_Mechanics'),
@@ -104,6 +125,7 @@ def build_and_train_network(df_discrete):
         # Lift depends on Lapse Rate and Ceiling
         ('Thermal_Quality',  'Lift_Potential'),
         ('Ceiling_State',    'Lift_Potential'),
+        ('Shear_State',      'Lift_Potential'), # High shear kills thermals
 
         # --- LAYER 2: Intermediate to Decisions ---
         # Can we fly? (Requires Safety AND Mechanics)
@@ -127,7 +149,6 @@ def build_and_train_network(df_discrete):
     return model
 
 
-
 async def flight_predictor(site_name: str, main_direction: int):
 
     # Prepare data
@@ -140,17 +161,12 @@ async def flight_predictor(site_name: str, main_direction: int):
     # 2. Discretize
     df_bn = discretize_data(df)
 
-    # 3. Rename columns to match the Network Nodes strictly
-    # This tells the model which column belongs to which node
-    df_bn = df_bn.rename(columns={
-        'Day_Potential': 'XC_Result' 
-        # Note: Intermediate nodes like 'Launch_Safety' are Latent (Hidden).
-        # If they don't exist in data, we can't train them directly with MaximumLikelihood.
-        # STRATEGY: For Phase 1, we will SIMPLIFY the network to map Inputs -> Output directly
-        # OR we must manually engineer the 'Launch_Safety' column in the discretization step.
-    })
+    logger.debug("\n=== Data Distribution ===")
+    for col in df_bn.columns:
+        logger.debug(f"{col}: {df_bn[col].value_counts().to_dict()}")
 
-    # --- IMPORTANT: Creating the Intermediate "Truth" Columns ---
+
+    # 3. Create Intermediate "Truth" Columns
     # Since we are training, we need to tell the model what "Launch_Safety" actually WAS historically.
     # We create these synthetic ground-truth columns based on logic.
     def label_safety(row):
@@ -175,7 +191,8 @@ async def flight_predictor(site_name: str, main_direction: int):
         evidence={
             'Wind_State': 'Strong', 
             'Alignment_State': 'Perfect', 
-            'Thermal_Quality': 'Stable'
+            'Thermal_Quality': 'Stable',
+            'Wind_850_State': 'Strong'
         }
     )
     logger.info(q1)
@@ -188,6 +205,7 @@ async def flight_predictor(site_name: str, main_direction: int):
             'Wind_State': 'Perfect', 
             'Thermal_Quality': 'Booming', 
             'Ceiling_State': 'High',
+            'Wind_850_State': 'Light',
             'Is_Flyable': 'Yes' # We assume we launched
         }
     )
@@ -198,5 +216,5 @@ if __name__ == '__main__':
     import asyncio
     
     asyncio.run(flight_predictor('Rammelsberg NW', 315))
-    asyncio.run(flight_predictor('Königszinne', 270))
+    #asyncio.run(flight_predictor('Königszinne', 270))
     #asyncio.run(flight_predictor('Börry', 180))

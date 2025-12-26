@@ -25,7 +25,8 @@ async def load_weather_data(site_name: str) -> DataFrame:
                         boundary_layer_height, -- pre 2022 ?
                         temperature_2m, -- post 2022 ?
                         dew_point_2m,
-                        temperature_850hPa
+                        temperature_850hPa,
+                        wind_speed_850hPa
                     FROM weather_data
                     WHERE site_name = :site_name and DATE(time) >= '2022-01-01'  """),
                 db,

@@ -53,7 +53,7 @@ def aggregate_weather(raw_weather_df: DataFrame, main_direction: int) -> DataFra
         DataFrame with daily aggregated weather metrics
     """
     if raw_weather_df.empty:
-        return pd.DataFrame()
+        return DataFrame()
     
     # Calculate wind direction alignment with main direction
     # cos(main_direction - wind_direction) gives 1 when aligned, -1 when opposite
@@ -72,6 +72,7 @@ def aggregate_weather(raw_weather_df: DataFrame, main_direction: int) -> DataFra
         'precipitation': 'sum',             # SUM precipitation
         'sunshine_duration': 'sum',         # SUM sunshine
         'cloud_cover_low': 'mean',
+        'wind_speed_850hPa': 'mean',
         'blh': 'max',
         'lability': 'max'
     }).reset_index()
@@ -86,11 +87,12 @@ def aggregate_weather(raw_weather_df: DataFrame, main_direction: int) -> DataFra
         'total_precipitation',
         'total_sunshine',
         'avg_cloud_cover',
+        'wind_speed_850hPa',
         'max_boundary_layer_height',
         'max_lapse_rate'
     ]
     
-    logger.info(f"Aggregated {len(raw_weather_df)} hourly records to {len(daily_weather)} daily records")
+    logger.debug(f"Aggregated {len(raw_weather_df)} hourly records to {len(daily_weather)} daily records")
     
     return daily_weather
 

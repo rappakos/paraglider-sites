@@ -14,7 +14,9 @@ async def load_flight_counts(site_name: str) -> DataFrame:
                     SELECT 
                         site_name,
                         FlightDate as date,
-                        COUNT(*) as flight_count
+                        COUNT(*) as flight_count,
+                        MAX(BestTaskPoints) as max_daily_score
+                        --get the type of the flight with MAX(BestTaskPoints)
                     FROM dhv_flights
                     WHERE site_name = :site_name
                     GROUP BY site_name, FlightDate

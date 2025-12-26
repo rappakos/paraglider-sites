@@ -11,6 +11,7 @@ python-multipart
 scikit-learn
 pgmpy>=0.1.25
 scipy
+holidays
 #networkx
 #matplotlib
 #seaborn

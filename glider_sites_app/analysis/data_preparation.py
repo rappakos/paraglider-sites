@@ -1,6 +1,7 @@
 # analysis/data_preparation.py
 
 import logging
+import holidays
 import pandas as pd
 from glider_sites_app.repositories.flights_repository import load_flight_counts
 from glider_sites_app.services.weather_service import load_agg_weather_data
@@ -9,7 +10,7 @@ from glider_sites_app.services.weather_service import load_agg_weather_data
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-async def prepare_training_data(site_name: str, main_direction: int) -> pd.DataFrame:
+async def prepare_training_data(site_name: str, main_direction: int, use_workingdays: bool = False) -> pd.DataFrame:
     """Merge flight and weather data"""
     logger.info(f"Loading data for {site_name}")
 
@@ -35,8 +36,15 @@ async def prepare_training_data(site_name: str, main_direction: int) -> pd.DataF
     merged_df['max_daily_score'] = merged_df['max_daily_score'].fillna(0)
 
     # Keep only weekends OR weekdays with flights
-    filter = (merged_df['is_weekend'] == 1) | (merged_df['flight_count'] > 0)
-    merged_df = merged_df[filter]   
+    if not use_workingdays:
+        filter = (merged_df['is_weekend'] == 1) | (merged_df['flight_count'] > 0)
+        merged_df = merged_df[filter]   
+
+    de_holidays = set(holidays.Germany(prov='NI'))
+    merged_df['is_workingday'] =(
+        (merged_df['is_weekend'] == 0) & 
+        (~merged_df['date'].isin(de_holidays))
+    ).astype(int)
 
     
     logger.debug(f"Merged data: {len(merged_df)} days with complete data")

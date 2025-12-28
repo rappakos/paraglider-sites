@@ -15,6 +15,7 @@ async def load_flight_counts(site_name: str) -> DataFrame:
                         site_name,
                         FlightDate as date,
                         COUNT(*) as flight_count,
+                        MAX(BestTaskPoints) as max_daily_score,
                         (SELECT FKPilot 
                          FROM dhv_flights f2 
                          WHERE f2.site_name = f.site_name 

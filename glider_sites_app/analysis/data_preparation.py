@@ -26,14 +26,15 @@ async def prepare_training_data(site_name: str, main_direction: int, use_working
     
     # Merge on date - LEFT JOIN to keep all weather days
     merged_df = weather_df.merge(
-        flights_df[['date', 'flight_count', 'max_daily_score']], 
+        flights_df[['date', 'flight_count', 'max_daily_score','best_score']], # best_score = best global score of the best pilot on that day
         on='date', 
         how='left'
     )
 
     # Fill days with no flights as 0
     merged_df['flight_count'] = merged_df['flight_count'].fillna(0)
-    merged_df['max_daily_score'] = merged_df['max_daily_score'].fillna(0)
+    merged_df['best_score'] = merged_df['best_score'].fillna(0)
+    merged_df['max_daily_score'] =merged_df['max_daily_score'].fillna(0)
 
     # Keep only weekends OR weekdays with flights
     if not use_workingdays:

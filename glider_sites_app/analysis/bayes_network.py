@@ -96,6 +96,12 @@ def discretize_data(df):
 
     data['Social_Window'] = df['is_workingday'].map({1: 'Low', 0: 'High'})
 
+    data['Pilot_Skill_Present'] = pd.cut(
+        df['best_score'],
+        bins=[-np.inf, 17, 87, np.inf],
+        labels=['Basic', 'Intermediate', 'Pro']
+    )
+
 
     # --- TARGETS (What we want to predict) ---
     # Binary Flyability
@@ -138,7 +144,8 @@ def build_and_train_network(df_discrete):
         # --- LAYER 3: Output ---
         # How good is the flight? (Requires Flyability AND Lift)
         ('Is_Flyable',       'XC_Result'),
-        ('Lift_Potential',   'XC_Result')
+        ('Lift_Potential',   'XC_Result'),
+        ('Pilot_Skill_Present', 'XC_Result')
     ])
 
     # Connect the learned data to the nodes
@@ -184,6 +191,8 @@ async def flight_predictor(site_name: str, main_direction: int):
     # 4. Train
     model = build_and_train_network(df_bn)
 
+    logging.info((model.get_cpds('XC_Result')))
+
     # 5. Query the Model (Inference)
     infer = VariableElimination(model)
 
@@ -197,6 +206,7 @@ async def flight_predictor(site_name: str, main_direction: int):
             'Thermal_Quality': 'Stable',
             #'Wind_850_State': 'Strong',
             'Social_Window': 'High' # assume weekend
+            , 'Pilot_Skill_Present': 'Intermediate'
         }
     )
     logger.info(q1)
@@ -211,6 +221,7 @@ async def flight_predictor(site_name: str, main_direction: int):
             'Ceiling_State': 'High',
             #'Wind_850_State': 'Light',
             'Is_Flyable': 'Yes' # We assume we launched
+            , 'Pilot_Skill_Present': 'Pro'
         }
     )
     logger.info(q2)
@@ -219,6 +230,6 @@ async def flight_predictor(site_name: str, main_direction: int):
 if __name__ == '__main__':
     import asyncio
     
-    #asyncio.run(flight_predictor('Rammelsberg NW', 315))
+    asyncio.run(flight_predictor('Rammelsberg NW', 315))
     #asyncio.run(flight_predictor('Königszinne', 270))
-    asyncio.run(flight_predictor('Börry', 180))
+    #asyncio.run(flight_predictor('Börry', 180))

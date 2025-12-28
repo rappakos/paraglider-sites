@@ -10,14 +10,18 @@
             <th>DHV ID</th>
             <th>Latitude</th>
             <th>Longitude</th>
+            <th>Elevation</th>
+            <th>Main direction</th>
             <th># Flights</th>
         </tr>
         {% for row in data %}
         <tr>
             <td><a href="/site/{{row.site_name}}">{{row.site_name}}</a></td>
             <td>{{row.dhv_site_id}}</th>
-            <td>{{row.geo_latitude}}</td>
-            <td>{{row.geo_longitude}}</td>
+            <td>{{row.geo_latitude|round(5)}}</td>
+            <td>{{row.geo_longitude|round(5)}}</td>
+            <td>{{row.elevation}} m</td>
+            <td>{{row.main_direction}}°</td>
             <td>{{row.flight_count}}</td>
         </tr>
         {% endfor %}

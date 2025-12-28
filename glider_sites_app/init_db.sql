@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS sites
     dhv_site_id INT NULL, 
     geo_latitude REAL,
     geo_longitude REAL,
-    elevation REAL
+    elevation REAL,
+    main_direction INT NULL
 );
 
 INSERT OR IGNORE INTO sites (site_name, dhv_site_id, geo_latitude, geo_longitude, elevation)
@@ -27,10 +28,16 @@ VALUES
     ,('Königszinne', 11489, 51.9778622956024, 9.52602605319744, 240 )    
     ,('Rammelsberg NW', 9427, 51.889874886365874, 10.43097291843072, 610 )
     ,('Rammelsberg SW', 9427, 51.8873305210640, 10.429834748486158, 610 )
-    ,('Porta', 9712, 52.24699164122411, 8.883940091582577, 240)
-    
-    
+    ,('Porta', 9712, 52.24699164122411, 8.883940091582577, 240)  
 ;
+
+--ALTER TABLE sites ADD COLUMN main_direction INT NULL;
+UPDATE sites SET main_direction = 180 WHERE site_name = 'Börry' AND main_direction IS NULL;
+UPDATE sites SET main_direction = 270 WHERE site_name = 'Königszinne' AND main_direction IS NULL;
+UPDATE sites SET main_direction = 315 WHERE site_name = 'Rammelsberg NW' AND main_direction IS NULL;
+UPDATE sites SET main_direction = 225 WHERE site_name = 'Rammelsberg SW' AND main_direction IS NULL;
+UPDATE sites SET main_direction = 195 WHERE site_name = 'Porta' AND main_direction IS NULL;
+
 
 --DROP TABLE dhv_flights;
 CREATE TABLE IF NOT EXISTS dhv_flights

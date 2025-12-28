@@ -4,14 +4,14 @@ from ..db import DB_NAME
 from pandas import read_sql_query, DataFrame
 
 
-async def get_stats():  
+async def get_stats() -> DataFrame:  
     engine = create_engine(f'sqlite:///{DB_NAME}?charset=utf8')
     try:
         with engine.connect() as db:
             param = {}
             df  = read_sql_query(text(f"""
     SELECT 
-        s.site_name, s.dhv_site_id, s.geo_latitude, s.geo_longitude, s.elevation,
+        s.site_name, s.dhv_site_id, s.geo_latitude, s.geo_longitude, s.elevation, s.main_direction,
         f.last_flight_date, f.flight_count,
         w.last_weather_time
     FROM sites s

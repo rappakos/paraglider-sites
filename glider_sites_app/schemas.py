@@ -9,6 +9,7 @@ class SiteBase(BaseModel):
     geo_latitude: float
     geo_longitude: float
     elevation: Optional[float] = None
+    main_direction: Optional[int] = None
 
 
 class SiteStats(SiteBase):

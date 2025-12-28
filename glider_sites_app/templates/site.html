@@ -3,8 +3,11 @@
 {% set title = name %}
 {% block content %}
     <div>DHV ID: {{data[0].dhv_site_id}}</div>
-    <div>Coords: {{data[0].geo_latitude}}, {{data[0].geo_longitude}}</div>
+    <div>Coords: {{data[0].geo_latitude|round(5)}}, {{data[0].geo_longitude|round(5)}}</div>
+    <div>Elevation: {{data[0].elevation}} m</div>
+    <div>Main direction: {{data[0].main_direction}}°</div>
     <div>Flights: {{data[0].flight_count}}</div>
+    
     <!-- <div>Last flight: {{data[0].last_flight_date}}</div> -->
 
     <!-- <table id="flights" class="w3-table w3-bordered">

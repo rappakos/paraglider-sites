@@ -1,5 +1,6 @@
 # services/site_service.py
 from glider_sites_app.repositories.sites_repository import get_stats
+from glider_sites_app.analysis.model_loader import load_site_model
 
 
 async def get_all_sites():
@@ -13,4 +14,8 @@ async def get_site_data(site_name: str):
     current = all_stats[all_stats['site_name'] == site_name]
     if current.empty:
         return None
+    
+    rf_model = load_site_model(site_name, type='classifier')
+
+
     return current.to_dict('records')[0]

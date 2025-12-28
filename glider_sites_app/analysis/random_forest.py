@@ -1,7 +1,6 @@
 # analysis/random_forest.py
 import logging
-import joblib
-import pathlib
+
 import pandas as pd
 import numpy as np
 from typing import Literal
@@ -10,29 +9,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score, f1_score
 
 from glider_sites_app.analysis.data_preparation import prepare_training_data
+from glider_sites_app.analysis.model_loader import save_resuls
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-def get_model_path(site_name: str, type: Literal['classifier', 'regressor']) -> pathlib.Path:
-    """Get the file path for the pre-trained model of the given site"""
-    model_dir = pathlib.Path(__file__).parent / "models"
-    model_path = model_dir / f"{site_name.replace(' ', '_')}_{type}_rf_model.joblib"
-    return model_path
-
-
-async def load_site_model(site_name: str, type: Literal['classifier', 'regressor']):
-    """Load a pre-trained Random Forest model for the given site"""
-    model_path = get_model_path(site_name, type)
-    
-    if not model_path.exists():
-        logger.error(f"Model file not found: {model_path}")
-        return None
-    
-    model = joblib.load(model_path)
-    logger.info(f"Loaded model from {model_path}")
-    return model
 
 
 async def train_flight_predictor(site_name: str, 
@@ -140,17 +121,16 @@ async def train_flight_predictor(site_name: str,
     
 
     if save:
-        model_path = get_model_path(site_name, type)
-        joblib.dump(model, model_path)
-        logger.info(f"Model saved to {model_path}")
+        save_resuls(site_name, type, result)
+
 
     return result
 
 
 if __name__ == '__main__':
     import asyncio
-    
-    #asyncio.run(train_flight_predictor('Königszinne', 'classifier', save=False))
-    #asyncio.run(train_flight_predictor('Rammelsberg NW', 'classifier', save=False))
-    #asyncio.run(train_flight_predictor('Börry', 'classifier', save=False))
-    asyncio.run(train_flight_predictor('Porta', 'classifier', save=False))
+    do_save=False
+    asyncio.run(train_flight_predictor('Königszinne', 'classifier', save=do_save))
+    asyncio.run(train_flight_predictor('Rammelsberg NW', 'classifier', save=do_save))
+    asyncio.run(train_flight_predictor('Börry', 'classifier', save=do_save))
+    asyncio.run(train_flight_predictor('Porta', 'classifier', save=do_save))

@@ -7,9 +7,10 @@ DB_NAME = './glider_sites.db'
 INIT_SCRIPT = './glider_sites_app/init_db.sql'
 
 
-async def setup_db():
+async def setup_db(app):
     """Initialize database on app startup"""
-    #app.state.db_name = DB_NAME
+    if app:
+        app.state.db_name = DB_NAME
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("PRAGMA encoding = 'UTF-8'")
         # Test connection

@@ -1,48 +1,61 @@
 import sys
+from contextlib import asynccontextmanager
 
-import aiohttp_jinja2
-import jinja2
-from aiohttp import web
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 from config import DefaultConfig
 from glider_sites_app.routes import setup_routes
-from glider_sites_app.middlewares import setup_middlewares
-from glider_sites_app.db import setup_db
+from glider_sites_app.db import setup_db, close_db
 
 CONFIG = DefaultConfig()
 
 
-
-async def init_app(argv=None):
-
-    app = web.Application()
-
-    app.config = CONFIG
-
-    # setup Jinja2 template renderer
-    aiohttp_jinja2.setup(
-        app, loader=jinja2.PackageLoader('glider_sites_app', 'templates'))
-
-    # setup db
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Initialize database
     await setup_db(app)
+    yield
+    # Shutdown: Close database connections
+    await close_db(app)
 
 
-    # setup views and routes
+def create_app():
+    app = FastAPI(
+        title="Paraglider Sites API",
+        description="API for paraglider site data analysis and modeling",
+        version="2.0.0",
+        lifespan=lifespan
+    )
+
+    # Store config
+    app.state.config = CONFIG
+    app.state.db_name = None  # Will be set by setup_db
+
+    # CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Setup routes
     setup_routes(app)
-
-    setup_middlewares(app)
 
     return app
 
 
-def main(argv):
-
-    app = init_app(argv)
-
-    web.run_app(app,
-                host='localhost',
-                port=CONFIG.PORT)
+app = create_app()
 
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    import uvicorn
+    uvicorn.run(
+        "app:app",
+        host='localhost',
+        port=CONFIG.PORT,
+        reload=True
+    )

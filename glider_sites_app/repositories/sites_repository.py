@@ -29,3 +29,19 @@ async def get_stats() -> DataFrame:
             return df
     finally:
         engine.dispose()
+
+async def get_main_direction(site_name: str) -> int:
+    engine = create_engine(f'sqlite:///{DB_NAME}?charset=utf8')
+    try:
+        with engine.connect() as db:
+            param = {'site_name': site_name}
+            result = db.execute(
+                text("SELECT main_direction FROM sites WHERE site_name = :site_name"),
+                param
+            ).fetchone()
+            if result:
+                return result[0]
+            else:
+                raise ValueError(f"Site {site_name} not found")
+    finally:
+        engine.dispose()

@@ -159,10 +159,10 @@ def build_and_train_network(df_discrete):
     return model
 
 
-async def flight_predictor(site_name: str, main_direction: int):
+async def flight_predictor(site_name: str):
 
     # Prepare data
-    df = await prepare_training_data(site_name,main_direction,use_workingdays=False)
+    df = await prepare_training_data(site_name,use_workingdays=True)
     
     if len(df) < 50:
         logger.error(f"Insufficient data: only {len(df)} days available")
@@ -191,7 +191,7 @@ async def flight_predictor(site_name: str, main_direction: int):
     # 4. Train
     model = build_and_train_network(df_bn)
 
-    logging.info((model.get_cpds('XC_Result')))
+    logging.debug((model.get_cpds('XC_Result')))
 
     # 5. Query the Model (Inference)
     infer = VariableElimination(model)
@@ -221,7 +221,7 @@ async def flight_predictor(site_name: str, main_direction: int):
             'Ceiling_State': 'High',
             #'Wind_850_State': 'Light',
             'Is_Flyable': 'Yes' # We assume we launched
-            , 'Pilot_Skill_Present': 'Pro'
+            , 'Pilot_Skill_Present': 'Intermediate'
         }
     )
     logger.info(q2)
@@ -230,6 +230,6 @@ async def flight_predictor(site_name: str, main_direction: int):
 if __name__ == '__main__':
     import asyncio
     
-    asyncio.run(flight_predictor('Rammelsberg NW', 315))
-    #asyncio.run(flight_predictor('Königszinne', 270))
-    #asyncio.run(flight_predictor('Börry', 180))
+    asyncio.run(flight_predictor('Rammelsberg NW'))
+    #asyncio.run(flight_predictor('Königszinne'))
+    #asyncio.run(flight_predictor('Börry'))

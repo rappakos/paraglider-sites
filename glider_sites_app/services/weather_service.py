@@ -3,7 +3,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from pandas import DataFrame, to_datetime
 
-from glider_sites_app.repositories.sites_repository import get_stats
+from glider_sites_app.repositories.sites_repository import get_stats, get_main_direction
 from glider_sites_app.repositories.weather_repository import load_weather_data, save_weather_data
 from glider_sites_app.tools.weather.constants import MIN_DATE
 from glider_sites_app.tools.weather.openmeteo_loader import refresh_weather_data
@@ -98,7 +98,8 @@ def aggregate_weather(raw_weather_df: DataFrame, main_direction: int) -> DataFra
     return daily_weather
 
 
-async def load_agg_weather_data(site_name:str, main_direction: int) -> DataFrame:
+async def load_agg_weather_data(site_name:str) -> DataFrame:
+    main_direction =  await get_main_direction(site_name)
     raw_weather_df = await load_weather_data(site_name)
     weather_df = aggregate_weather(raw_weather_df,main_direction)
     

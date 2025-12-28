@@ -13,11 +13,14 @@ from glider_sites_app.analysis.data_preparation import prepare_training_data
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-async def train_flight_predictor(site_name: str, main_direction: int, type: Literal['classifier', 'regressor'], test_size: float = 0.2):
+async def train_flight_predictor(site_name: str, 
+                                 type: Literal['classifier', 'regressor'], 
+                                 test_size: float = 0.2
+    ):
     """Train Random Forest to predict daily flight count"""
     
     # Prepare data
-    df = await prepare_training_data(site_name,main_direction)
+    df = await prepare_training_data(site_name)
     
     if len(df) < 50:
         logger.error(f"Insufficient data: only {len(df)} days available")
@@ -118,7 +121,7 @@ async def train_flight_predictor(site_name: str, main_direction: int, type: Lite
 if __name__ == '__main__':
     import asyncio
     
-    #asyncio.run(train_flight_predictor('Königszinne', 270, 'classifier'))
-    asyncio.run(train_flight_predictor('Rammelsberg NW', 315, 'classifier'))
-    #asyncio.run(train_flight_predictor('Börry', 180, 'classifier'))
-    #asyncio.run(train_flight_predictor('Porta', 195, 'classifier'))
+    #asyncio.run(train_flight_predictor('Königszinne', 'classifier'))
+    asyncio.run(train_flight_predictor('Rammelsberg NW', 'classifier'))
+    #asyncio.run(train_flight_predictor('Börry', 'classifier'))
+    #asyncio.run(train_flight_predictor('Porta', 'classifier'))

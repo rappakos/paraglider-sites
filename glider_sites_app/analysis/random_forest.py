@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 
 async def train_flight_predictor(site_name: str, 
                                  type: Literal['classifier', 'regressor'], 
-                                 test_size: float = 0.2
+                                 test_size: float = 0.2,
+                                 save: bool = False
     ):
     """Train Random Forest to predict daily flight count"""
     
@@ -95,10 +96,10 @@ async def train_flight_predictor(site_name: str,
     logger.info(f"Feature importance:\n{importance}")
     
     result = {
+        'site_name': site_name, 
         'model': model,
         'features': features,
-        'feature_importance': importance,
-        'training_data': df
+        'feature_importance': importance
     }
     
     # Add type-specific metrics
@@ -115,13 +116,24 @@ async def train_flight_predictor(site_name: str,
             'test_r2': test_r2
         })
     
+
+    if save:
+        import pathlib
+        import joblib
+        
+        model_dir = pathlib.Path(__file__).parent / "models"
+        model_dir.mkdir(exist_ok=True)
+        model_path = model_dir / f"{site_name.replace(' ', '_')}_{type}_rf_model.joblib"
+        joblib.dump(model, model_path)
+        logger.info(f"Model saved to {model_path}")
+
     return result
 
 
 if __name__ == '__main__':
     import asyncio
     
-    #asyncio.run(train_flight_predictor('Königszinne', 'classifier'))
-    asyncio.run(train_flight_predictor('Rammelsberg NW', 'classifier'))
-    #asyncio.run(train_flight_predictor('Börry', 'classifier'))
-    #asyncio.run(train_flight_predictor('Porta', 'classifier'))
+    #asyncio.run(train_flight_predictor('Königszinne', 'classifier', save=False))
+    #asyncio.run(train_flight_predictor('Rammelsberg NW', 'classifier', save=False))
+    #asyncio.run(train_flight_predictor('Börry', 'classifier', save=False))
+    asyncio.run(train_flight_predictor('Porta', 'classifier', save=False))

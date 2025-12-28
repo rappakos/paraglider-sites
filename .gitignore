@@ -194,3 +194,4 @@ cython_debug/
 .cursorindexingignore
 glider_sites.db
 *.db
+*.joblib

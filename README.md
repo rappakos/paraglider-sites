@@ -9,9 +9,37 @@ This project has been migrated to **FastAPI** with added machine learning capabi
 - OpenAPI/Swagger documentation
 - Modern async API design
 
-**See [README_FASTAPI.md](README_FASTAPI.md) for the new FastAPI version.**
 
----
+## Quick start
+
+1. **Clone the repository**
+```bash
+cd paraglider-sites
+```
+
+2. **Create virtual environment**
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+```
+
+3. **Install dependencies**
+```powershell
+pip install -r requirements.txt
+```
+
+4. **Configure environment**
+Create a `.env` file with:
+```
+PORT=3979
+```
+
+5. **Running the applicaiton**
+
+```powershell
+uvicorn app:app --reload --host localhost --port 3979
+```
+
 
 ## DB
 

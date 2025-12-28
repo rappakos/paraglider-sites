@@ -34,7 +34,10 @@ async def api_get_site_details(site_name: str):
 @api_router.get("/{site_name}/forecast")
 async def api_get_site_forecast(request: Request, site_name: str):
     """Get forecast data for a specific site"""
-    data = await get_forecast_data(site_name)
+    # get weather data
+    start_date = '2024-06-01'
+    end_date = '2024-06-07'
+    data = await get_forecast_data(site_name, start_date, end_date  )
     if not data:
         raise HTTPException(status_code=404, detail="Site not found")    
 

@@ -27,7 +27,7 @@ async def get_site_data(site_name: str):
 
     return result
 
-async def get_forecast_data(site_name: str):
+async def get_forecast_data(site_name: str, start_date: str = '2025-06-01', end_date: str = '2025-06-07'):
     """Helper function to get forecast data for a site (placeholder)"""
     all_stats = await get_stats()
     current = all_stats[all_stats['site_name'] == site_name]
@@ -37,10 +37,7 @@ async def get_forecast_data(site_name: str):
     rf_model = load_site_model(site_name, type='classifier')
     if rf_model is None:
         return None
-    
-    # get weather data
-    start_date = '2025-06-01'
-    end_date = '2025-06-07'
+  
 
     weather_df = await load_forecast_weather(site_name, start_date, end_date)
     X = weather_df[rf_model['features']]

@@ -5,7 +5,7 @@ from typing import List
 from .schemas import (
     SiteStats
 )
-from .services.site_service import get_site_data, get_all_sites
+from .services.site_service import get_site_data, get_all_sites, get_forecast_data
 
 PROJECT_ROOT = pathlib.Path(__file__).parent
 # Setup Jinja2 templates
@@ -31,6 +31,16 @@ async def api_get_site_details(site_name: str):
         raise HTTPException(status_code=404, detail="Site not found")    
     return data
 
+@api_router.get("/{site_name}/forecast")
+async def api_get_site_forecast(request: Request, site_name: str):
+    """Get forecast data for a specific site"""
+    data = await get_forecast_data(site_name)
+    if not data:
+        raise HTTPException(status_code=404, detail="Site not found")    
+
+    return data
+
+
 # HTML page routes
 @page_router.get("/")
 async def index(request: Request):
@@ -50,6 +60,8 @@ async def site_details(request: Request, site_name: str):
         "name": site_name,
         "data": [data]
     })
+
+
 
 
 def setup_routes(app):

@@ -95,7 +95,29 @@ def aggregate_weather(raw_weather_df: DataFrame, main_direction: int) -> DataFra
     
     logger.debug(f"Aggregated {len(raw_weather_df)} hourly records to {len(daily_weather)} daily records")
     
+    # Add day-of-week features
+    daily_weather['date'] = to_datetime(daily_weather['date'])
+    daily_weather['day_of_week'] = daily_weather['date'].dt.dayofweek  # 0=Monday, 6=Sunday
+    daily_weather['is_weekend'] = (daily_weather['day_of_week'] >= 5).astype(int)  # 1 for Sat/Sun, 0 for weekdays
+    
+    # Filter out invalid data
+    daily_weather = daily_weather[
+        (daily_weather['avg_wind_speed'].notna()) &
+        (daily_weather['total_sunshine'].notna())
+    ]
+
     return daily_weather
+
+async def load_forecast_weather(site_name:str, start_date:str, end_date:str) -> DataFrame:
+
+    main_direction =  await get_main_direction(site_name)
+    raw_weather_df = await load_weather_data(site_name)
+    filter = (raw_weather_df['date'] >= start_date) & (raw_weather_df['date'] <= end_date)
+    raw_weather_df = raw_weather_df[filter]
+
+    weather_df = aggregate_weather(raw_weather_df,main_direction)
+
+    return weather_df
 
 
 async def load_agg_weather_data(site_name:str) -> DataFrame:
@@ -103,17 +125,6 @@ async def load_agg_weather_data(site_name:str) -> DataFrame:
     raw_weather_df = await load_weather_data(site_name)
     weather_df = aggregate_weather(raw_weather_df,main_direction)
     
-    # Add day-of-week features
-    weather_df['date'] = to_datetime(weather_df['date'])
-    weather_df['day_of_week'] = weather_df['date'].dt.dayofweek  # 0=Monday, 6=Sunday
-    weather_df['is_weekend'] = (weather_df['day_of_week'] >= 5).astype(int)  # 1 for Sat/Sun, 0 for weekdays
-    
-    # Filter out invalid data
-    weather_df = weather_df[
-        (weather_df['avg_wind_speed'].notna()) &
-        (weather_df['total_sunshine'].notna())
-    ]
-
     return weather_df
     
 

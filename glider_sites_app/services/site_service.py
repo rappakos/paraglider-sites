@@ -15,7 +15,18 @@ async def get_site_data(site_name: str):
     if current.empty:
         return None
     
+    result =  current.to_dict('records')[0]
+
     rf_model = load_site_model(site_name, type='classifier')
+    if rf_model is not None:
+        current = current.copy()
+        result['has_model'] = True
+        result['rf_model'] = {'feature_importances': rf_model['feature_importance'].to_dict('records')}
+    else:
+        result = current.copy()
+        result['has_model'] = False
 
 
-    return current.to_dict('records')[0]
+    print(result)
+
+    return result

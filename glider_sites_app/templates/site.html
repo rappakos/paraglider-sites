@@ -7,7 +7,13 @@
     <div>Elevation: {{data[0].elevation}} m</div>
     <div>Main direction: {{data[0].main_direction}}°</div>
     <div>Flights: {{data[0].flight_count}}</div>
-    
+    {% if data[0].has_model %}
+    <div>Random Forest Model:</div>
+        {% for item in data[0].rf_model.feature_importances %}
+            <div>{{item.feature}}: {{(item.importance*100)|round(2)}}%</div>
+        {% endfor %}
+    {% endif %}
+
     <!-- <div>Last flight: {{data[0].last_flight_date}}</div> -->
 
     <!-- <table id="flights" class="w3-table w3-bordered">

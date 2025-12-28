@@ -1,5 +1,7 @@
 # analysis/random_forest.py
 import logging
+import joblib
+import pathlib
 import pandas as pd
 import numpy as np
 from typing import Literal
@@ -12,6 +14,26 @@ from glider_sites_app.analysis.data_preparation import prepare_training_data
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def get_model_path(site_name: str, type: Literal['classifier', 'regressor']) -> pathlib.Path:
+    """Get the file path for the pre-trained model of the given site"""
+    model_dir = pathlib.Path(__file__).parent / "models"
+    model_path = model_dir / f"{site_name.replace(' ', '_')}_{type}_rf_model.joblib"
+    return model_path
+
+
+async def load_site_model(site_name: str, type: Literal['classifier', 'regressor']):
+    """Load a pre-trained Random Forest model for the given site"""
+    model_path = get_model_path(site_name, type)
+    
+    if not model_path.exists():
+        logger.error(f"Model file not found: {model_path}")
+        return None
+    
+    model = joblib.load(model_path)
+    logger.info(f"Loaded model from {model_path}")
+    return model
+
 
 async def train_flight_predictor(site_name: str, 
                                  type: Literal['classifier', 'regressor'], 
@@ -118,12 +140,7 @@ async def train_flight_predictor(site_name: str,
     
 
     if save:
-        import pathlib
-        import joblib
-        
-        model_dir = pathlib.Path(__file__).parent / "models"
-        model_dir.mkdir(exist_ok=True)
-        model_path = model_dir / f"{site_name.replace(' ', '_')}_{type}_rf_model.joblib"
+        model_path = get_model_path(site_name, type)
         joblib.dump(model, model_path)
         logger.info(f"Model saved to {model_path}")
 

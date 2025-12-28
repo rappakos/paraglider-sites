@@ -5,16 +5,9 @@
     <div>DHV ID: {{data[0].dhv_site_id}}</div>
     <div>Coords: {{data[0].geo_latitude}}, {{data[0].geo_longitude}}</div>
     <div>Flights: {{data[0].flight_count}}</div>
-    <div>Last flight: {{data[0].last_flight_date}}</div>
+    <!-- <div>Last flight: {{data[0].last_flight_date}}</div> -->
 
-<div>
-    <form action="/{{name}}" method="post" class="w3-container " autocomplete="off" >
-        <input type="submit" value="Refresh flights list" class="w3-button"  />
-    </form>
-</div>
-
-
-    <table id="flights" class="w3-table w3-bordered">
+    <!-- <table id="flights" class="w3-table w3-bordered">
         <tr>
             <th>Flight date</th>
             <th>XC points</th>
@@ -27,5 +20,5 @@
             <td>{{flight.FlightDuration}}</td>
         </tr>
         {% endfor %}
-    </table>
+    </table> -->
 {% endblock %}

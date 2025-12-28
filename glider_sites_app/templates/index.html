@@ -10,11 +10,11 @@
             <th>DHV ID</th>
             <th>Latitude</th>
             <th>Longitude</th>
-            <th>Flights</th>
+            <th># Flights</th>
         </tr>
         {% for row in data %}
         <tr>
-            <td><a href="./{{row.site_name}}">{{row.site_name}}</a></td>
+            <td><a href="/site/{{row.site_name}}">{{row.site_name}}</a></td>
             <td>{{row.dhv_site_id}}</th>
             <td>{{row.geo_latitude}}</td>
             <td>{{row.geo_longitude}}</td>

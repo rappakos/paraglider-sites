@@ -1,4 +1,5 @@
 # services/site_service.py
+import asyncio
 from glider_sites_app.repositories.sites_repository import get_stats
 from glider_sites_app.analysis.model_loader import load_site_model
 from glider_sites_app.services.weather_service import load_forecast_weather
@@ -18,7 +19,8 @@ async def get_site_data(site_name: str):
     
     result =  current.to_dict('records')[0]
 
-    rf_model = load_site_model(site_name, type='classifier')
+    # Run blocking I/O in thread pool to avoid blocking event loop
+    rf_model = await asyncio.to_thread(load_site_model, site_name, type='classifier')
     if rf_model is not None:
         result['has_model'] = True
         result['rf_model'] = {'feature_importances': rf_model['feature_importance'].to_dict('records')}
@@ -34,14 +36,17 @@ async def get_forecast_data(site_name: str, start_date: str = '2025-06-01', end_
     if current.empty:
         return None
 
-    rf_model = load_site_model(site_name, type='classifier')
+    # Run blocking I/O in thread pool to avoid blocking event loop
+    rf_model = await asyncio.to_thread(load_site_model, site_name, type='classifier')
     if rf_model is None:
         return None
   
 
     weather_df = await load_forecast_weather(site_name, start_date, end_date)
     X = weather_df[rf_model['features']]
-    weather_df['predictions'] = rf_model['model'].predict(X)
+    # Run blocking predict in thread pool
+    predictions = await asyncio.to_thread(rf_model['model'].predict, X)
+    weather_df['predictions'] = predictions
 
     forecast_data = {"forecast": weather_df.to_dict('records')}  
     return forecast_data

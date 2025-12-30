@@ -118,6 +118,24 @@ def discretize_data(df):
 
     return data.dropna() # BNs hate NaNs
 
+
+def add_intermediate_states(df_discrete):
+    """
+    Add intermediate state columns for Bayesian Network inference.
+    These states are derived from discretized weather states.
+    """
+    def label_safety(row):
+        if row['Wind_State'] == 'Nuke' or row['Turbulence_State'] == 'Dangerous':
+            return 'Unsafe'
+        return 'Safe'
+    
+    df_discrete['Launch_Safety'] = df_discrete.apply(label_safety, axis=1)
+    df_discrete['Site_Mechanics'] = df_discrete['Alignment_State'].apply(lambda x: 'On' if x in ['Perfect', 'Okay'] else 'Off')
+    df_discrete['Lift_Potential'] = df_discrete.apply(lambda x: 'Good' if x['Thermal_Quality'] == 'Booming' else 'Bad', axis=1)
+    
+    return df_discrete
+
+
 def build_and_train_network(df_discrete):
     # Define the DAG (Directed Acyclic Graph)
     # Syntax: (Parent, Child)
@@ -174,15 +192,8 @@ def predict_from_raw_weather(model, raw_weather_df):
     # 1. Discretize the input data
     df_discrete = discretize_data(raw_weather_df)
     
-    # 2. Create intermediate truth columns for inference
-    def label_safety(row):
-        if row['Wind_State'] == 'Nuke' or row['Turbulence_State'] == 'Dangerous':
-            return 'Unsafe'
-        return 'Safe'
-    
-    df_discrete['Launch_Safety'] = df_discrete.apply(label_safety, axis=1)
-    df_discrete['Site_Mechanics'] = df_discrete['Alignment_State'].apply(lambda x: 'On' if x in ['Perfect', 'Okay'] else 'Off')
-    df_discrete['Lift_Potential'] = df_discrete.apply(lambda x: 'Good' if x['Thermal_Quality'] == 'Booming' else 'Bad', axis=1)
+    # 2. Add intermediate state columns for inference
+    df_discrete = add_intermediate_states(df_discrete)
     
     # 3. Run inference for each row
     infer = VariableElimination(model)
@@ -248,14 +259,7 @@ async def flight_predictor(site_name: str, save_model: bool = False):
     # 3. Create Intermediate "Truth" Columns
     # Since we are training, we need to tell the model what "Launch_Safety" actually WAS historically.
     # We create these synthetic ground-truth columns based on logic.
-    def label_safety(row):
-        if row['Wind_State'] == 'Nuke' or row['Turbulence_State'] == 'Dangerous':
-            return 'Unsafe'
-        return 'Safe'
-
-    df_bn['Launch_Safety'] = df_bn.apply(label_safety, axis=1)
-    df_bn['Site_Mechanics'] = df_bn['Alignment_State'].apply(lambda x: 'On' if x in ['Perfect', 'Okay'] else 'Off')
-    df_bn['Lift_Potential'] = df_bn.apply(lambda x: 'Good' if x['Thermal_Quality'] == 'Booming' else 'Bad', axis=1)
+    df_bn = add_intermediate_states(df_bn)
 
     # 4. Train
     model = build_and_train_network(df_bn)

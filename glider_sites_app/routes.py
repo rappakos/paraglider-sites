@@ -51,6 +51,25 @@ async def index(request: Request):
     data = await get_all_sites()
     return templates.TemplateResponse("index.html", {"request": request, "data": data})
 
+
+@page_router.get("/forecast")
+async def forecast_page(request: Request):
+    """Forecast page"""
+    site_data = await get_all_sites()
+    # get weather data
+    start_date = '2024-06-01'
+    end_date = '2024-06-07'
+    for site in site_data:
+        # Get full site data which includes has_model
+        site_details = await get_site_data(site['site_name'])
+        if site_details and site_details.get('has_model'):
+            forecast = await get_forecast_data(site['site_name'], start_date, end_date)
+            site['has_model'] = True
+            site['forecast'] = forecast
+        else:
+            site['has_model'] = False
+    return templates.TemplateResponse("forecast.html", {"request": request, "data": site_data})
+
 @page_router.get("/site/{site_name}")
 async def site_details(request: Request, site_name: str):
     """Site details page"""

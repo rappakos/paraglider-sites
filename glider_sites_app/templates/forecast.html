@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% set title = "Forecast" %}
+
+{% block content %}
+<table class="w3-table w3-bordered">
+    <thead>
+        <tr>
+            <th>Site</th>
+            {% if data %}
+                {% for site in data[:1] %}
+                    {% if site.get('has_model') and site.get('forecast') and site.forecast.forecast %}
+                        {% for day in site.forecast.forecast[:7] %}
+                            <th>{{ day.get('date', day.get('time', ''))|string|truncate(10, True, '') }}</th>
+                        {% endfor %}
+                    {% else %}
+                        <!-- only first row has headers -->
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for site in data %}
+            {% if site.get('has_model') %}
+                <tr>
+                    <td><a href="/site/{{ site.site_name }}">{{ site.site_name }}</a></td>
+                    {% if site.get('forecast') and site.forecast.forecast %}
+                        {% for day in site.forecast.forecast[:7] %}
+                            <td class="{{ 'A' if day.predictions == 1 else 'C' }}">
+                                {{ day.predictions }}
+                            </td>
+                        {% endfor %}
+                    {% else %}
+                        <td colspan="7">No forecast data</td>
+                    {% endif %}
+                </tr>
+            {% endif %}
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

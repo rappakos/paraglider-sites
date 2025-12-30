@@ -271,8 +271,14 @@ async def flight_predictor(site_name: str, save_model: bool = False):
         ]
         save_bayesian_model(model, site_name, features)
 
-    # 5. Query the Model (Inference)
-    infer = VariableElimination(model)
+    # TEST RELOAD
+    loaded_model_data = load_bayesian_model(site_name)
+    if loaded_model_data:
+        infer = VariableElimination(loaded_model_data['model'])
+        logger.info(f"Loaded model with features: {loaded_model_data['features']}")
+    else:
+        # 5. Query the Model (Inference)
+        infer = VariableElimination(model)
 
     logger.info("\n=== SCENARIO 1: The 'Windy but Aligned' Day ===")
     logger.info("Wind: Strong, Alignment: Perfect, Lapse: Stable")
@@ -309,8 +315,12 @@ if __name__ == '__main__':
     import asyncio
     
     # Train and save model
-    asyncio.run(flight_predictor('Rammelsberg NW', save_model=True))
-    
+    #asyncio.run(flight_predictor('Rammelsberg NW', save_model=True))
+    #asyncio.run(flight_predictor('Königszinne', save_model=True))
+    #asyncio.run(flight_predictor('Börry', save_model=True))
+    asyncio.run(flight_predictor('Porta', save_model=True))
+
+
     # Example: Load model and make predictions
     # from glider_sites_app.analysis.model_loader import load_bayesian_model
     # loaded_model = load_bayesian_model('Rammelsberg NW')
@@ -318,5 +328,3 @@ if __name__ == '__main__':
     #     predictions = predict_from_raw_weather(loaded_model['model'], raw_weather_df)
     #     print(predictions)
     
-    #asyncio.run(flight_predictor('Königszinne'))
-    #asyncio.run(flight_predictor('Börry'))

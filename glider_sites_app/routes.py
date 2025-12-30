@@ -57,8 +57,8 @@ async def forecast_page(request: Request):
     """Forecast page"""
     site_data = await get_all_sites()
     # get weather data
-    start_date = '2024-06-01'
-    end_date = '2024-06-07'
+    start_date = '2025-12-30'
+    end_date = '2026-01-04'
     for site in site_data:
         # Get full site data which includes has_model
         site_details = await get_site_data(site['site_name'])

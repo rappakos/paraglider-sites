@@ -4,7 +4,7 @@ MIN_DATE = '2018-01-01'
 
 URL_ARCHIVE = "https://archive-api.open-meteo.com/v1/archive"  # PRE 2022-01-01 - does not include pressure level data
 URL = "https://historical-forecast-api.open-meteo.com/v1/forecast"  # FROM 2022-01-01, includes pressure level data
-
+URL_FORECAST = "https://api.open-meteo.com/v1/forecast"  # forecast data
 
 TIME_ZONE = "Europe/Berlin"
 START_HOUR = 10

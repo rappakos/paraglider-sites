@@ -6,7 +6,7 @@ from pandas import DataFrame, to_datetime
 from glider_sites_app.repositories.sites_repository import get_stats, get_main_direction
 from glider_sites_app.repositories.weather_repository import load_weather_data, save_weather_data
 from glider_sites_app.tools.weather.constants import MIN_DATE
-from glider_sites_app.tools.weather.openmeteo_loader import refresh_weather_data
+from glider_sites_app.tools.weather.openmeteo_loader import refresh_weather_data, load_new_forecast_data
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -109,11 +109,28 @@ def aggregate_weather(raw_weather_df: DataFrame, main_direction: int) -> DataFra
     return daily_weather
 
 async def load_forecast_weather(site_name:str, start_date:str, end_date:str) -> DataFrame:
-
+    if start_date > end_date:
+        return DataFrame()
+    
     main_direction =  await get_main_direction(site_name)
-    raw_weather_df = await load_weather_data(site_name)
-    filter = (raw_weather_df['date'] >= start_date) & (raw_weather_df['date'] <= end_date)
-    raw_weather_df = raw_weather_df[filter]
+    if main_direction is None:
+        return DataFrame()
+
+    if datetime.strptime(start_date, '%Y-%m-%d') >= datetime.now() + timedelta(days=-2):
+        infos = await get_stats()
+        site_info = infos[infos['site_name'] == site_name]
+        if site_info.empty:
+            logger.error(f"Site {site_name} not found in stats")
+            return
+
+        lat, lng, elev = site_info.iloc[0]['geo_latitude'], site_info.iloc[0]['geo_longitude'], site_info.iloc[0]['elevation']        
+        raw_weather_df = await load_new_forecast_data(lat, lng, elev)
+        raw_weather_df['site_name'] = site_name
+        logger.info(raw_weather_df.head())
+    else:
+        raw_weather_df = await load_weather_data(site_name)
+        filter = (raw_weather_df['date'] >= start_date) & (raw_weather_df['date'] <= end_date)
+        raw_weather_df = raw_weather_df[filter]
 
     weather_df = aggregate_weather(raw_weather_df,main_direction)
 

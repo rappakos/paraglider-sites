@@ -4,10 +4,39 @@ import requests
 import pandas as pd
 
 from glider_sites_app.schemas import SiteBase
-from glider_sites_app.tools.weather.constants import END_HOUR, HOURLY_PARAMS, HOURLY_PARAMS_ARCHIVE, START_HOUR, TIME_ZONE, URL, URL_ARCHIVE
+from glider_sites_app.tools.weather.constants import END_HOUR, HOURLY_PARAMS, HOURLY_PARAMS_ARCHIVE, START_HOUR, TIME_ZONE, URL, URL_ARCHIVE, URL_FORECAST
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+async def load_new_forecast_data(geo_lat: float,geo_long:float, elevation:float):
+    start_date = pd.Timestamp.now().strftime('%Y-%m-%d')
+    end_date = (pd.Timestamp.now() + pd.Timedelta(days=7)).strftime('%Y-%m-%d')
+    params = {
+	    "latitude": geo_lat,
+	    "longitude": geo_long,
+        "elevation": elevation,
+	    "start_date": start_date,
+	    "end_date": end_date,
+	    "hourly":  HOURLY_PARAMS,
+    }
+    openmeteo_url = f'{URL_FORECAST}?latitude={params["latitude"]}&longitude={params["longitude"]}&elevation={params["elevation"]}&start_date={params["start_date"]}&end_date={params["end_date"]}&hourly={",".join(params["hourly"])}&timezone={TIME_ZONE}'
+    res = requests.get(openmeteo_url)
+    if res.status_code == 200:
+        data = res.json()
+        logger.info(f"{len(data['hourly']['time'])} weather data rows fetched for lat={geo_lat:.3}, lon={geo_long:.3} from {start_date} to {end_date}")
+        logger.debug(f"Data keys: {list([k for k in data.keys() if k not in HOURLY_PARAMS])}")
+        logger.debug(f"Timezone: {data.get('timezone', 'N/A')}, offset: {data.get('utc_offset_seconds', 'N/A')}")
+        df = pd.DataFrame(data['hourly'], columns= data['hourly_units'])
+        df['time'] = pd.to_datetime(df['time'])
+        df['date'] = df['time'].dt.date.astype(str)
+        filter_mask = df['time'].dt.hour.between(START_HOUR, END_HOUR)
+
+        return df[filter_mask]
+    else:
+        logging.warning(f"Failed with {res.status_code}:{res}")
+        return None    
 
 async def refresh_weather_data(geo_lat: float,geo_long:float, elevation:float, start_date:str, end_date: str ):
     if not start_date:

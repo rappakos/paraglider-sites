@@ -8,6 +8,7 @@ from pgmpy.estimators import MaximumLikelihoodEstimator
 from pgmpy.inference import VariableElimination
 
 from glider_sites_app.analysis.data_preparation import prepare_training_data
+from glider_sites_app.analysis.model_loader import save_bayesian_model, load_bayesian_model
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,7 +25,7 @@ def discretize_data(df):
     # 0-5: Too weak (Parawaiting)
     # 5-15: Perfect
     # 15-25: Strong (Experts only)
-    # >30: Nuke (Danger)
+    # >25: Nuke (Danger)
     data['Wind_State'] = pd.cut(
         df['avg_wind_speed'], 
         bins=[-np.inf, 5, 15, 25, np.inf], 
@@ -159,7 +160,75 @@ def build_and_train_network(df_discrete):
     return model
 
 
-async def flight_predictor(site_name: str):
+def predict_from_raw_weather(model, raw_weather_df):
+    """
+    Predict flight outcomes from raw (undiscretized) weather data
+    
+    Args:
+        model: Trained Bayesian Network model
+        raw_weather_df: DataFrame with raw weather features
+        
+    Returns:
+        DataFrame with predictions and probabilities
+    """
+    # 1. Discretize the input data
+    df_discrete = discretize_data(raw_weather_df)
+    
+    # 2. Create intermediate truth columns for inference
+    def label_safety(row):
+        if row['Wind_State'] == 'Nuke' or row['Turbulence_State'] == 'Dangerous':
+            return 'Unsafe'
+        return 'Safe'
+    
+    df_discrete['Launch_Safety'] = df_discrete.apply(label_safety, axis=1)
+    df_discrete['Site_Mechanics'] = df_discrete['Alignment_State'].apply(lambda x: 'On' if x in ['Perfect', 'Okay'] else 'Off')
+    df_discrete['Lift_Potential'] = df_discrete.apply(lambda x: 'Good' if x['Thermal_Quality'] == 'Booming' else 'Bad', axis=1)
+    
+    # 3. Run inference for each row
+    infer = VariableElimination(model)
+    predictions = []
+    
+    for idx, row in df_discrete.iterrows():
+        try:
+            # Build evidence dictionary from the row
+            evidence = {
+                'Wind_State': row['Wind_State'],
+                'Turbulence_State': row['Turbulence_State'],
+                'Alignment_State': row['Alignment_State'],
+                'Thermal_Quality': row['Thermal_Quality'],
+                'Ceiling_State': row['Ceiling_State'],
+                'Social_Window': row['Social_Window'],
+                'Pilot_Skill_Present': row['Pilot_Skill_Present']
+            }
+            
+            # Query the model
+            result = infer.query(variables=['Is_Flyable', 'XC_Result'], evidence=evidence)
+            
+            # Extract probabilities
+            flyable_prob = result['Is_Flyable'].values[1] if len(result['Is_Flyable'].values) > 1 else 0
+            xc_probs = result['XC_Result'].values
+            
+            predictions.append({
+                'date': raw_weather_df.iloc[idx].get('date', idx),
+                'is_flyable_prob': flyable_prob,
+                'xc_sled_prob': xc_probs[0] if len(xc_probs) > 0 else 0,
+                'xc_local_prob': xc_probs[1] if len(xc_probs) > 1 else 0,
+                'xc_xc_prob': xc_probs[2] if len(xc_probs) > 2 else 0,
+                'xc_hammer_prob': xc_probs[3] if len(xc_probs) > 3 else 0,
+                'predicted_flyable': 'Yes' if flyable_prob > 0.5 else 'No'
+            })
+        except Exception as e:
+            logger.warning(f"Prediction failed for row {idx}: {e}")
+            predictions.append({
+                'date': raw_weather_df.iloc[idx].get('date', idx),
+                'is_flyable_prob': 0,
+                'predicted_flyable': 'No'
+            })
+    
+    return pd.DataFrame(predictions)
+
+
+async def flight_predictor(site_name: str, save_model: bool = False):
 
     # Prepare data
     df = await prepare_training_data(site_name,use_workingdays=True)
@@ -192,6 +261,15 @@ async def flight_predictor(site_name: str):
     model = build_and_train_network(df_bn)
 
     logging.debug((model.get_cpds('XC_Result')))
+    
+    # Save model if requested
+    if save_model:
+        features = [
+            'avg_wind_speed', 'max_wind_gust', 'avg_wind_alignment',
+            'max_lapse_rate', 'max_boundary_layer_height', 'wind_speed_850hPa',
+            'is_workingday', 'best_score'
+        ]
+        save_bayesian_model(model, site_name, features)
 
     # 5. Query the Model (Inference)
     infer = VariableElimination(model)
@@ -230,6 +308,15 @@ async def flight_predictor(site_name: str):
 if __name__ == '__main__':
     import asyncio
     
-    asyncio.run(flight_predictor('Rammelsberg NW'))
+    # Train and save model
+    asyncio.run(flight_predictor('Rammelsberg NW', save_model=True))
+    
+    # Example: Load model and make predictions
+    # from glider_sites_app.analysis.model_loader import load_bayesian_model
+    # loaded_model = load_bayesian_model('Rammelsberg NW')
+    # if loaded_model:
+    #     predictions = predict_from_raw_weather(loaded_model['model'], raw_weather_df)
+    #     print(predictions)
+    
     #asyncio.run(flight_predictor('Königszinne'))
     #asyncio.run(flight_predictor('Börry'))

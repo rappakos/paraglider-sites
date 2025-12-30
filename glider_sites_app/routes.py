@@ -1,7 +1,8 @@
 import pathlib
-from fastapi import APIRouter, HTTPException, Request
+from datetime import datetime, timedelta
+from fastapi import APIRouter, HTTPException, Request, Query
 from fastapi.templating import Jinja2Templates
-from typing import List
+from typing import List, Optional
 from .schemas import (
     SiteStats
 )
@@ -32,12 +33,20 @@ async def api_get_site_details(site_name: str):
     return data
 
 @api_router.get("/{site_name}/forecast")
-async def api_get_site_forecast(request: Request, site_name: str):
-    """Get forecast data for a specific site"""
-    # get weather data
-    start_date = '2024-06-01'
-    end_date = '2024-06-07'
-    data = await get_forecast_data(site_name, start_date, end_date  )
+async def api_get_site_forecast(
+    site_name: str,
+    start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD), defaults to today")
+):
+    """Get forecast data for a specific site (5-day forecast)"""
+    # Default to current day if not provided
+    if not start_date:
+        start_date = datetime.now().strftime('%Y-%m-%d')
+    
+    # Calculate end_date as start_date + 5 days
+    start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+    end_date = (start_dt + timedelta(days=5)).strftime('%Y-%m-%d')
+    
+    data = await get_forecast_data(site_name, start_date, end_date)
     if not data:
         raise HTTPException(status_code=404, detail="Site not found")    
 
@@ -53,12 +62,20 @@ async def index(request: Request):
 
 
 @page_router.get("/forecast")
-async def forecast_page(request: Request):
-    """Forecast page"""
+async def forecast_page(
+    request: Request,
+    start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD), defaults to today")
+):
+    """Forecast page (5-day forecast)"""
+    # Default to current day if not provided
+    if not start_date:
+        start_date = datetime.now().strftime('%Y-%m-%d')
+    
+    # Calculate end_date as start_date + 5 days
+    start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+    end_date = (start_dt + timedelta(days=5)).strftime('%Y-%m-%d')
+    
     site_data = await get_all_sites()
-    # get weather data
-    start_date = '2025-12-30'
-    end_date = '2026-01-04'
     for site in site_data:
         # Get full site data which includes has_model
         site_details = await get_site_data(site['site_name'])

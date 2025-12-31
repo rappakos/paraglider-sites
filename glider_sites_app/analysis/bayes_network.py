@@ -370,8 +370,8 @@ if __name__ == '__main__':
     #asyncio.run(flight_predictor('Rammelsberg NW', save_model=True))
     #asyncio.run(flight_predictor('Königszinne', save_model=True))
     #asyncio.run(flight_predictor('Börry', save_model=True))
-    asyncio.run(flight_predictor('Porta', save_model=True))
-
+    #asyncio.run(flight_predictor('Porta', save_model=True))
+    asyncio.run(flight_predictor('Brunsberg', save_model=True))
 
     # Example: Load model and make predictions
     # from glider_sites_app.analysis.model_loader import load_bayesian_model

@@ -147,7 +147,7 @@ async def load_agg_weather_data(site_name:str) -> DataFrame:
 
 async def sync_weather(site_name:str):
     infos = await get_stats()
-    logger.info(infos.head())
+    logger.info(infos.head(10))
 
     site_info = infos[infos['site_name'] == site_name]
     if site_info.empty:
@@ -168,4 +168,5 @@ async def sync_weather(site_name:str):
 
 if __name__=='__main__':
     import asyncio
-    asyncio.run(sync_weather('Porta'))
+    #asyncio.run(sync_weather('Porta'))
+    asyncio.run(sync_weather('Brunsberg'))

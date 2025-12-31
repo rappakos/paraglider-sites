@@ -7,7 +7,7 @@ DB_NAME = './glider_sites.db'
 INIT_SCRIPT = './glider_sites_app/init_db.sql'
 
 
-async def setup_db(app):
+async def setup_db(app=None):
     """Initialize database on app startup"""
     if app:
         app.state.db_name = DB_NAME

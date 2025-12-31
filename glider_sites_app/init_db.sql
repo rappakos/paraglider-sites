@@ -29,6 +29,7 @@ VALUES
     ,('Rammelsberg NW', 9427, 51.889874886365874, 10.43097291843072, 610 )
     ,('Rammelsberg SW', 9427, 51.8873305210640, 10.429834748486158, 610 )
     ,('Porta', 9712, 52.24699164122411, 8.883940091582577, 240)  
+    ,('Brunsberg', 9844,51.74784318315067, 9.350173267903484, 290)
 ;
 
 --ALTER TABLE sites ADD COLUMN main_direction INT NULL;
@@ -37,6 +38,7 @@ UPDATE sites SET main_direction = 270 WHERE site_name = 'Königszinne' AND main_
 UPDATE sites SET main_direction = 315 WHERE site_name = 'Rammelsberg NW' AND main_direction IS NULL;
 UPDATE sites SET main_direction = 225 WHERE site_name = 'Rammelsberg SW' AND main_direction IS NULL;
 UPDATE sites SET main_direction = 195 WHERE site_name = 'Porta' AND main_direction IS NULL;
+UPDATE sites SET main_direction = 105 WHERE site_name = 'Brunsberg' AND main_direction IS NULL;
 
 
 --DROP TABLE dhv_flights;

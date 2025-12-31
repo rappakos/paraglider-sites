@@ -94,4 +94,5 @@ async def sync_dhv_flights(site_name: str):
 if __name__ == "__main__":
     import asyncio
     #asyncio.run(sync_dhv_flights('Porta'))
-    asyncio.run(load_flight_data('Porta'))
+    #asyncio.run(load_flight_data('Porta'))
+    asyncio.run(sync_dhv_flights('Brunsberg'))

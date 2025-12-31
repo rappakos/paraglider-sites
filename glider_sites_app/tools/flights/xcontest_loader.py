@@ -416,7 +416,7 @@ class XContestLoader:
             return pd.DataFrame()
         
         # Determine which dates to process
-        dates_to_fetch = [flight_dates[0]] if get_next_date_only else flight_dates
+        dates_to_fetch = [flight_dates[0]] if get_next_date_only else flight_dates[:10]
         
         logger.info(f"Will fetch {len(dates_to_fetch)} date(s): {dates_to_fetch}")
         

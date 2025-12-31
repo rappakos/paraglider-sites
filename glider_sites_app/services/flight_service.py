@@ -114,7 +114,8 @@ async def sync_xcontest_flights(site_name: str):
         lon=lon,
         date_from=date_from,
         username=username,
-        password=password
+        password=password,
+        get_next_date_only=False
     )
 
     logger.info(f"\nLoaded {len(flights_df)} flights from XContest for site {site_name}")

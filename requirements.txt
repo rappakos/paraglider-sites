@@ -12,6 +12,7 @@ scikit-learn
 pgmpy>=0.1.25
 scipy
 holidays
+playwright>=1.40.0
 #networkx
 #matplotlib
 #seaborn

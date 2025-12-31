@@ -12,11 +12,12 @@ async def get_stats() -> DataFrame:
             df  = read_sql_query(text(f"""
     SELECT 
         s.site_name, s.dhv_site_id, s.geo_latitude, s.geo_longitude, s.elevation, s.main_direction,
-        f.last_flight_date, f.flight_count,
+        f.last_flight_date, f.flight_count, f.total_flight_days,
         w.last_weather_time
     FROM sites s
     LEFT JOIN (
         SELECT site_name, MAX(FlightDate) as last_flight_date, COUNT(DISTINCT IDFlight) as flight_count
+            , COUNT(DISTINCT DATE(FlightDate)) as total_flight_days
         FROM dhv_flights
         GROUP BY site_name
     ) f ON f.site_name = s.site_name

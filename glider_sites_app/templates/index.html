@@ -13,6 +13,7 @@
             <th>Elevation</th>
             <th>Main direction</th>
             <th># Flights</th>
+            <th># Flight days</th>
         </tr>
         {% for row in data %}
         <tr>
@@ -23,6 +24,7 @@
             <td>{{row.elevation}} m</td>
             <td>{{row.main_direction}}°</td>
             <td>{{row.flight_count}}</td>
+            <td>{{row.total_flight_days}}</td>
         </tr>
         {% endfor %}
     </table>

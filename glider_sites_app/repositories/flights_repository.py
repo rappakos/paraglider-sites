@@ -106,3 +106,32 @@ async def save_dhv_flights(df_flights:DataFrame):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, df_flights[columns_to_save].values.tolist())
         await db.commit()
+
+async def save_xcontest_flights(df_flights:DataFrame):
+    # Rename DataFrame columns to match database schema
+    df_flights = df_flights.rename(columns={'date': 'flight_date', 'time': 'flight_time'})
+    
+    columns_to_save = ['flight_id', 'flight_date', 'flight_time', 'pilot_id', 
+                       'pilot_name', 'takeoff_name', 'flight_type', 
+                       'distance_km', 'points', 'glider_category', 'glider_name', 
+                       'flight_details', 'site_name']
+
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.executemany("""
+            INSERT OR IGNORE INTO xcontest_flights 
+            (flight_id, 
+            flight_date, 
+            flight_time, 
+            pilot_id, 
+            pilot_name,
+            takeoff_name,
+            flight_type,
+            distance_km, 
+            points, 
+            glider_category,
+            glider_name,
+            flight_details,
+            site_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, df_flights[columns_to_save].values.tolist())
+        await db.commit()

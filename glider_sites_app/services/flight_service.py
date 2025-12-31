@@ -5,7 +5,7 @@ from glider_sites_app.repositories.sites_repository import get_stats
 from glider_sites_app.schemas import SiteBase
 from ..tools.flights.dhv_loader import refresh_flight_list
 from ..tools.flights.xcontest_loader import load_xcontest_flights
-from ..repositories.flights_repository import get_last_xcontest_flight_date, save_dhv_flights, pilot_stats, load_flight_counts
+from ..repositories.flights_repository import get_last_xcontest_flight_date, save_dhv_flights, pilot_stats, load_flight_counts, save_xcontest_flights
 
 MIN_DATE = '2018-01-01'
 
@@ -121,7 +121,10 @@ async def sync_xcontest_flights(site_name: str):
 
     logger.info(f"\nLoaded {len(flights_df)} flights from XContest for site {site_name}")
 
-    # TODO save flights to DB
+    # TODO this is not entirely correct but we don't have the exact start coordinates here
+    flights_df['site_name'] = site_name
+    await save_xcontest_flights(flights_df)
+    
 
 if __name__ == "__main__":
     import asyncio    

@@ -20,20 +20,41 @@ def discretize_data(df):
     """
     data = pd.DataFrame()
     
+    # ChatGPT Suggested Discretization Bins:
+    # | Node                | Bins        |
+    # | ------------------- | ----------- |
+    # | Wind_State          | **4–6**     |
+    # | Turbulence_State    | **3–4**     |
+    # | Thermal_Quality     | **4–5**     |
+    # | Ceiling_State       | **4**       |
+    # | Alignment_State     | 3           |
+    # | Launch_Safety       | 3           |
+    # | Site_Mechanics      | 3           |
+    # | Lift_Potential      | 3           |
+    # | Social_Window       | 2–3         |
+    # | Pilot_Skill_Present | 2–3         |
+    # | Is_Flyable          | 2–3         |
+    # | XC_Result           | 3 (maybe 4) |
+
+
+
     # --- 1. WIND STATE (The Mechanical Energy) ---
-    # Thresholds based on your Random Forest findings
-    # 0-5: Too weak (Parawaiting)
-    # 5-15: Perfect
-    # 15-25: Strong (Experts only)
-    # >25: Nuke (Danger)
+    # < 1.5 m/s  Calm             -> < 5.4 km/h
+    # 1.5 -3.5 m/s  Ideal         -> 5.4 - 12.6 km/h
+    # 3.5 - 5.5 m/s Strong        -> 12.6 - 19.8 km/h
+    # 5.5 - 7.5  m/s Very Strong  -> 19.8 - 27 km/h
+    # > 7.5  m/s Extreme          -> > 27 km/h
+    #
     data['Wind_State'] = pd.cut(
         df['avg_wind_speed'], 
-        bins=[-np.inf, 5, 15, 25, np.inf], 
-        labels=['Calm', 'Perfect', 'Strong', 'Nuke']
+        bins=[-np.inf, 5.4, 12.6, 19.8, 27, np.inf], 
+        #labels=['Calm', 'Perfect', 'Strong', 'Nuke']
+        labels=['Calm', 'Ideal', 'Strong', 'Very Strong', 'Extreme']
     )
 
-    # --- 2. GUST FACTOR (The Turbulence) ---
+    # --- 2. GUST FACTOR (The Turbulence) ---    
     # Gust Factor = Max Gust / Avg Speed
+    # TODO Adjust bins - 1 more?
     # < 1.5: Smooth Laminar
     # > 1.8: Dangerous Turbulence
     gust_factor = df['max_wind_gust'] / (df['avg_wind_speed'] + 1) # +1 avoids div/0
@@ -46,7 +67,7 @@ def discretize_data(df):
     # --- 3. ALIGNMENT (The Geometry) ---
     # Your COS metric (1.0 = Perfect, 0.0 = Cross)
     # > 0.8: Good launch (45 deg -> sqrt 2 / 2 is 0.707)
-    # < 0.5: Unflyable crosswind
+    # < 0.5: Unflyable crosswind (60 deg -> 0.5)
     data['Alignment_State'] = pd.cut(
         df['avg_wind_alignment'], 
         bins=[-np.inf,0.5 , 0.8, np.inf], 
@@ -55,8 +76,11 @@ def discretize_data(df):
 
     # --- 4. ENGINE (Lapse Rate / Lift) ---
     # Temp diff between 2m and 850hPa (approx 1500m)
-    # < 4C: Inversion / Stable (Sled ride)
-    # > 8C: Unstable (Good XC)
+    # < 4 °C/1000m: Stable 
+    # 4-6 °C/1000m: Weak
+    # 6-8 °C/1000m: OK
+    # > 8 °C/1000m: Great
+    # Rammi factor: Delta T / Delta Height * 1000=  Delta T / (1500-610) *1000 = Delta T * 1.12
     if 'max_lapse_rate' in df.columns:
         lr_col = 'max_lapse_rate'
     else:
@@ -66,11 +90,13 @@ def discretize_data(df):
         
     data['Thermal_Quality'] = pd.cut(
         df[lr_col],
-        bins=[-np.inf, 4, 8, np.inf],
-        labels=['Stable', 'Weak', 'Booming']
+        bins=[-np.inf, 3.57,5.36, 7.14, np.inf],
+        #labels=['Stable', 'Weak', 'Booming']
+        labels=['Stable', 'Weak', 'OK', 'Great']
     )
 
     # --- 5. CEILING (BLH) ---
+    # TODO Adjust bins
     # < 800m: Scratching
     # > 1500m: XC Highway
     data['Ceiling_State'] = pd.cut(
@@ -147,13 +173,13 @@ def add_intermediate_states(df_discrete):
     These states are derived from discretized weather states.
     """
     def label_safety(row):
-        if row['Wind_State'] == 'Nuke' or row['Turbulence_State'] == 'Dangerous':
+        if row['Wind_State'] in ['Very Strong', 'Extreme'] or row['Turbulence_State'] == 'Dangerous':
             return 'Unsafe'
         return 'Safe'
     
     df_discrete['Launch_Safety'] = df_discrete.apply(label_safety, axis=1)
     df_discrete['Site_Mechanics'] = df_discrete['Alignment_State'].apply(lambda x: 'On' if x in ['Perfect', 'Okay'] else 'Off')
-    df_discrete['Lift_Potential'] = df_discrete.apply(lambda x: 'Good' if x['Thermal_Quality'] == 'Booming' else 'Bad', axis=1)
+    df_discrete['Lift_Potential'] = df_discrete.apply(lambda x: 'Good' if x['Thermal_Quality'] in ['OK', 'Great'] else 'Bad', axis=1)
     
     return df_discrete
 
@@ -322,12 +348,12 @@ async def flight_predictor(site_name: str, save_model: bool = False):
     logger.info(q1)
 
     logger.info("\n=== SCENARIO 2: The 'Perfect Thermal' Day ===")
-    logger.info("Wind: Perfect, Lapse: Booming, Ceiling: High")
+    logger.info("Wind: Perfect, Lapse: Great, Ceiling: High")
     q2 = infer.query(
         variables=['XC_Result'], 
         evidence={
-            'Wind_State': 'Perfect', 
-            'Thermal_Quality': 'Booming', 
+            'Wind_State': 'Ideal', 
+            'Thermal_Quality': 'Great', 
             'Ceiling_State': 'High',
             #'Wind_850_State': 'Light',
             'Is_Flyable': 'Yes' # We assume we launched

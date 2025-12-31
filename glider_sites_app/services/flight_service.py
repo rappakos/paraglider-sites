@@ -5,7 +5,11 @@ from glider_sites_app.repositories.sites_repository import get_stats
 from glider_sites_app.schemas import SiteBase
 from ..tools.flights.dhv_loader import refresh_flight_list
 from ..tools.flights.xcontest_loader import load_xcontest_flights
-from ..repositories.flights_repository import get_last_xcontest_flight_date, save_dhv_flights, pilot_stats, load_flight_counts, save_xcontest_flights
+from ..repositories.flights_repository import get_last_xcontest_flight_date, \
+        get_xcontest_flight_counts, load_flight_counts, pilot_stats, \
+        save_dhv_flights, save_xcontest_flights
+
+
 
 MIN_DATE = '2018-01-01'
 
@@ -92,7 +96,11 @@ async def sync_dhv_flights(site_name: str):
     # save 
     await save_dhv_flights(flights[flights['site_name'].notna()])
 
-
+async def xcontest_flight_count(site_name: str):
+    """Get XContest flight count for a given site"""
+    res = await get_xcontest_flight_counts(site_name)
+    logger.info(res.tail(20))
+    return res
 
 async def sync_xcontest_flights(site_name: str):
     """Sync XContest flights for a given site"""
@@ -134,4 +142,5 @@ if __name__ == "__main__":
     #asyncio.run(sync_dhv_flights('Porta'))
     #asyncio.run(load_flight_data('Porta'))
     #asyncio.run(sync_dhv_flights('Brunsberg'))
-    asyncio.run(sync_xcontest_flights('Rammelsberg NW'))
+    #asyncio.run(sync_xcontest_flights('Rammelsberg NW'))
+    asyncio.run(xcontest_flight_count('Rammelsberg NW'))

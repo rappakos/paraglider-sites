@@ -33,6 +33,38 @@ async def load_flight_counts(site_name: str) -> DataFrame:
     finally:
         engine.dispose()
 
+async def get_xcontest_flight_counts(site_name: str) -> DataFrame:
+    """Load daily xcontest flight counts for a site"""
+    engine = create_engine(f'sqlite:///{DB_NAME}')
+    try:
+        with engine.connect() as db:
+            df = read_sql_query(
+                text("""
+                    SELECT 
+                        site_name,
+                        flight_date as date,
+                        COUNT(*) as flight_count,
+                        MAX(points) as max_daily_score,
+                        (SELECT pilot_id 
+                         FROM xcontest_flights f2 
+                         WHERE f2.site_name = f.site_name 
+                           AND f2.flight_date = f.flight_date 
+                         ORDER BY points DESC 
+                         LIMIT 1) as best_pilot_id
+                    FROM xcontest_flights f
+                    WHERE site_name = :site_name
+                        AND NOT EXISTS (SELECT 1 FROM dhv_flights d 
+                                        WHERE d.site_name = f.site_name and d.FlightDate = f.flight_date)
+                    GROUP BY site_name, flight_date
+                """),
+                db,
+                params={'site_name': site_name}
+            )
+        return df
+    finally:
+        engine.dispose()
+
+
 async def pilot_stats() -> DataFrame:
     """Load pilot statistics"""
     engine = create_engine(f'sqlite:///{DB_NAME}')

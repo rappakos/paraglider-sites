@@ -92,3 +92,28 @@ CREATE INDEX IF NOT EXISTS idx_dhv_flights_site_name ON dhv_flights(site_name);
 CREATE INDEX IF NOT EXISTS idx_dhv_flights_flight_date ON dhv_flights(FlightDate);
 CREATE INDEX IF NOT EXISTS idx_weather_data_site_name ON weather_data(site_name);
 CREATE INDEX IF NOT EXISTS idx_weather_data_time ON weather_data(time);
+
+--DROP TABLE xcontest_flights;
+CREATE TABLE IF NOT EXISTS xcontest_flights
+(
+    site_name TEXT NOT NULL,
+    flight_id TEXT PRIMARY KEY,
+    flight_date TEXT NOT NULL,
+    flight_time TEXT NOT NULL,
+    pilot_id TEXT NOT NULL,
+    pilot_name TEXT NULL,
+    takeoff_name TEXT,
+    flight_type TEXT,
+    distance_km REAL,
+    points REAL,
+    glider_category TEXT,
+    glider_name TEXT,
+    flight_details TEXT,
+    FOREIGN KEY(site_name) REFERENCES sites(site_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_xcontest_flights_site_name ON xcontest_flights(site_name);
+CREATE INDEX IF NOT EXISTS idx_xcontest_flights_flight_date ON xcontest_flights(flight_date);
+CREATE INDEX IF NOT EXISTS idx_xcontest_flights_pilot_id ON xcontest_flights(pilot_id);
+
+

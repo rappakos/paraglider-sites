@@ -117,3 +117,5 @@ CREATE INDEX IF NOT EXISTS idx_xcontest_flights_flight_date ON xcontest_flights(
 CREATE INDEX IF NOT EXISTS idx_xcontest_flights_pilot_id ON xcontest_flights(pilot_id);
 
 
+
+UPDATE xcontest_flights SET site_name = 'Rammelsberg SW' WHERE site_name = 'Rammelsberg NW'  and flight_date = '2020-11-05';

@@ -1,8 +1,10 @@
 # services/flight_service.py
 import logging
+import os
 from glider_sites_app.repositories.sites_repository import get_stats
 from glider_sites_app.schemas import SiteBase
 from ..tools.flights.dhv_loader import refresh_flight_list
+from ..tools.flights.xcontest_loader import load_xcontest_flights
 from ..repositories.flights_repository import save_dhv_flights, pilot_stats, load_flight_counts
 
 MIN_DATE = '2018-01-01'
@@ -91,8 +93,40 @@ async def sync_dhv_flights(site_name: str):
     await save_dhv_flights(flights[flights['site_name'].notna()])
 
 
+
+async def sync_xcontest_flights(site_name: str):
+    """Sync XContest flights for a given site"""
+    infos = await get_stats()
+    site_info = infos[infos['site_name'] == site_name]
+    if site_info.empty:
+        logger.error(f"Site {site_name} not found in stats")
+        return
+    lat, lon = site_info.iloc[0]['geo_latitude'], site_info.iloc[0]['geo_longitude']
+
+    # TODO get the last xcontest flight date for incremental loading
+    date_from = "2018-01-01"
+
+    username = os.getenv('XCONTEST_USERNAME')
+    password = os.getenv('XCONTEST_PASSWORD')
+
+    flights_df = await load_xcontest_flights(
+        lat=lat,
+        lon=lon,
+        date_from=date_from,
+        username=username,
+        password=password
+    )
+
+    logger.info(f"\nLoaded {len(flights_df)} flights from XContest for site {site_name}")
+
+    # TODO save flights to DB
+
 if __name__ == "__main__":
-    import asyncio
+    import asyncio    
+    from dotenv import load_dotenv
+    
+    load_dotenv()    
     #asyncio.run(sync_dhv_flights('Porta'))
     #asyncio.run(load_flight_data('Porta'))
-    asyncio.run(sync_dhv_flights('Brunsberg'))
+    #asyncio.run(sync_dhv_flights('Brunsberg'))
+    asyncio.run(sync_xcontest_flights('Rammelsberg NW'))

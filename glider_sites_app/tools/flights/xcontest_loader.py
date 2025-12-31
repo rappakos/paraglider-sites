@@ -498,7 +498,7 @@ if __name__ == "__main__":
     )
     
     print(f"\nFound {len(flights_df)} flights")
-    print(flights_df.head(10))
+    print(flights_df.head())
     
     # Show summary
     if not flights_df.empty:

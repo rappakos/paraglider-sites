@@ -113,7 +113,7 @@ class XContestLoader:
         lat: float,
         lon: float,
         radius_m: int = RADIUS_M_DEFAULT,
-        date_from: Optional[str] = None,
+        date_filter: Optional[str] = None,
         mode: str = 'START',
         sort: str = 'pts',
         sort_dir: str = 'down'
@@ -125,7 +125,7 @@ class XContestLoader:
             lat: Latitude of search center
             lon: Longitude of search center
             radius_m: Search radius in meters (default RADIUS_M_DEFAULTm)
-            date_from: Start date in YYYY-MM-DD format (month will be used)
+            date_filter: Date filter in YYYY-MM-DD (specific day), YYYY-MM (month), or YYYY (year) format
             mode: Search mode (START, LINE, etc.)
             sort: Sort field (pts, date, dst)
             sort_dir: Sort direction (up, down)
@@ -143,10 +143,9 @@ class XContestLoader:
             'list[dir]': sort_dir
         }
         
-        # Add date filter if provided (XContest filters by month only)
-        if date_from:
-            date_start = datetime.strptime(date_from, '%Y-%m-%d')
-            params['filter[date]'] = date_start.strftime('%Y-%m')
+        # Add date filter if provided (can be YYYY, YYYY-MM, or YYYY-MM-DD)
+        if date_filter:
+            params['filter[date]'] = date_filter
         
         base_url = 'https://www.xcontest.org/world/en/flights-search/'
         return f"{base_url}?{urlencode(params)}"
@@ -334,36 +333,44 @@ class XContestLoader:
         
         return flights
     
-    async def has_next_page(self) -> bool:
+    async def extract_available_flight_dates(self, date_from: Optional[str] = None) -> List[str]:
         """
-        Check if there's a next page available
+        Extract available flight dates from the date filter dropdown
         
+        Args:
+            date_from: Only return dates > this date (YYYY-MM-DD format)
+            
         Returns:
-            True if next page exists, False otherwise
+            List of flight dates in YYYY-MM-DD format, sorted ascending
         """
         try:
-            next_button = await self.page.query_selector('a.next:not(.disabled)')
-            return next_button is not None
-        except:
-            return False
-    
-    async def goto_next_page(self) -> bool:
-        """
-        Navigate to the next page
-        
-        Returns:
-            True if navigation successful, False otherwise
-        """
-        try:
-            next_button = await self.page.query_selector('a.next:not(.disabled)')
-            if next_button:
-                await next_button.click()
-                await self.page.wait_for_load_state('networkidle')
-                return True
+            # Get all options from the date filter dropdown
+            date_options = await self.page.query_selector_all('select#filter-date option')
+            
+            flight_dates = []
+            for option in date_options:
+                value = await option.get_attribute('value')
+                # Only include options with full dates (YYYY-MM-DD format)
+                # Skip empty, year-only (YYYY), or month-only (YYYY-MM) options
+                if value and len(value) == 10 and value.count('-') == 2:
+                    # Filter by date_from if provided
+                    if date_from is None or value > date_from:
+                        flight_dates.append(value)
+            
+            # Sort dates ascending (oldest first)
+            flight_dates.sort()
+            
+            logger.info(f"Found {len(flight_dates)} available flight dates")
+            if flight_dates:
+                logger.info(f"Date range: {flight_dates[0]} to {flight_dates[-1]}")
+            
+            return flight_dates
+            
         except Exception as e:
-            logger.error(f"Failed to navigate to next page: {e}")
-        
-        return False
+            logger.error(f"Failed to extract flight dates: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return []
     
     async def search_flights(
         self,
@@ -371,7 +378,7 @@ class XContestLoader:
         lon: float,
         radius_m: int = RADIUS_M_DEFAULT,
         date_from: Optional[str] = None,
-        max_pages: int = 10
+        get_next_date_only: bool = True
     ) -> pd.DataFrame:
         """
         Search for flights and return as DataFrame
@@ -380,8 +387,9 @@ class XContestLoader:
             lat: Latitude of search center
             lon: Longitude of search center
             radius_m: Search radius in meters
-            date_from: Start date (YYYY-MM-DD) - month will be used for filtering
-            max_pages: Maximum number of pages to scrape
+            date_from: Start date (YYYY-MM-DD) - only dates > this will be fetched
+            get_next_date_only: If True, only fetch the next available flight date (default: True)
+                               If False, fetch all available dates from date_from onwards
             
         Returns:
             DataFrame with flight data
@@ -393,35 +401,38 @@ class XContestLoader:
         
         all_flights = []
         
-        # Build and navigate to search URL
-        url = self.build_search_url(lat, lon, radius_m, date_from)
-        logger.info(f"Searching flights: {url}")
-        
+        # First, navigate to search page WITHOUT date filter to load ALL available dates for this location
+        # The dropdown is populated based on the location, not the date filter
+        url = self.build_search_url(lat, lon, radius_m, date_filter=None)
+        logger.info(f"Loading search page to get available dates: {url}")
         await self.page.goto(url)
-       # await self.page.wait_for_load_state('networkidle')
+        await asyncio.sleep(1)  # Wait for dropdown to populate with location-specific dates
         
-        # Extract flights from pages
-        page_num = 1
-        while page_num <= max_pages:
-            logger.info(f"Processing page {page_num}/{max_pages}")
+        # Extract available flight dates
+        flight_dates = await self.extract_available_flight_dates(date_from)
+        
+        if not flight_dates:
+            logger.warning(f"No flight dates found from {date_from}")
+            return pd.DataFrame()
+        
+        # Determine which dates to process
+        dates_to_fetch = [flight_dates[0]] if get_next_date_only else flight_dates
+        
+        logger.info(f"Will fetch {len(dates_to_fetch)} date(s): {dates_to_fetch}")
+        
+        # Fetch flights for each date
+        for flight_date in dates_to_fetch:
+            logger.info(f"Fetching flights for {flight_date}...")
             
+            # Build URL for specific date
+            url = self.build_search_url(lat, lon, radius_m, flight_date)
+            await self.page.goto(url)
+            await asyncio.sleep(1)  # Be polite to server
+            
+            # Extract flights from this date
             flights = await self.extract_flights_from_page()
+            logger.info(f"  Found {len(flights)} flights on {flight_date}")
             all_flights.extend(flights)
-            
-            # Check for next page
-            if not await self.has_next_page():
-                logger.info("No more pages available")
-                break
-            
-            # Navigate to next page
-            if not await self.goto_next_page():
-                logger.warning("Failed to navigate to next page")
-                break
-            
-            page_num += 1
-            
-            # Small delay to be polite
-            await asyncio.sleep(1)
         
         logger.info(f"Total flights extracted: {len(all_flights)}")
         
@@ -435,7 +446,7 @@ async def load_xcontest_flights(
     date_from: Optional[str] = None,
     username: Optional[str] = None,
     password: Optional[str] = None,
-    max_pages: int = 10
+    get_next_date_only: bool = True
 ) -> pd.DataFrame:
     """
     Convenience function to load XContest flights
@@ -444,17 +455,18 @@ async def load_xcontest_flights(
         lat: Latitude of search center
         lon: Longitude of search center  
         radius_m: Search radius in meters (default 250m)
-        date_from: Start date (YYYY-MM-DD) - month will be used for filtering
+        date_from: Start date (YYYY-MM-DD) - only dates > this will be fetched
         username: XContest username for authentication
         password: XContest password
-        max_pages: Maximum pages to scrape
+        get_next_date_only: If True, only fetch the next available flight date (default: True)
+                           Allows flights_service to incrementally load data
         
     Returns:
         DataFrame with flight data
     """
     async with XContestLoader(username, password) as loader:
         return await loader.search_flights(
-            lat, lon, radius_m, date_from, max_pages
+            lat, lon, radius_m, date_from, get_next_date_only
         )
 
 
@@ -477,11 +489,11 @@ if __name__ == "__main__":
         load_xcontest_flights(
             lat=lat,
             lon=lon,
-            #radius_m=RADIUS_M_DEFAULT,
-            date_from='2022-05-01',  # Will filter by May 2022
+            radius_m=RADIUS_M_DEFAULT,
+            date_from='2022-04-30',  # Will get next available flight date > this
             username=username,
             password=password,
-            max_pages=3
+            get_next_date_only=True  # Only get next date (flights_service handles incremental loading)
         )
     )
     

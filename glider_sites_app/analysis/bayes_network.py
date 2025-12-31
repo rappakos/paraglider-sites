@@ -95,26 +95,48 @@ def discretize_data(df):
         labels=['Light', 'Drift', 'Strong']
     )
 
-    data['Social_Window'] = df['is_workingday'].map({1: 'Low', 0: 'High'})
+    # Handle optional columns for forecast vs training data
+    if 'is_workingday' in df.columns:
+        data['Social_Window'] = df['is_workingday'].map({1: 'Low', 0: 'High'})
+    else:
+        # For forecast data, infer from date (weekends = High participation)
+        if 'date' in df.columns:
+            dates = pd.to_datetime(df['date'])
+            data['Social_Window'] = dates.dt.dayofweek.apply(lambda x: 'High' if x >= 5 else 'Low')
+        else:
+            # Default to High for forecasts
+            data['Social_Window'] = 'High'
 
-    data['Pilot_Skill_Present'] = pd.cut(
-        df['best_score'],
-        bins=[-np.inf, 17, 87, np.inf],
-        labels=['Basic', 'Intermediate', 'Pro']
-    )
+    if 'best_score' in df.columns:
+        data['Pilot_Skill_Present'] = pd.cut(
+            df['best_score'],
+            bins=[-np.inf, 17, 87, np.inf],
+            labels=['Basic', 'Intermediate', 'Pro']
+        )
+    else:
+        # For forecast data, assume intermediate skill level
+        data['Pilot_Skill_Present'] = 'Intermediate'
 
 
     # --- TARGETS (What we want to predict) ---
     # Binary Flyability
-    data['Is_Flyable'] = df['flight_count'].apply(lambda x: 'Yes' if x > 0 else 'No')
+    if 'flight_count' in df.columns:
+        data['Is_Flyable'] = df['flight_count'].apply(lambda x: 'Yes' if x > 0 else 'No')
+    else:
+        # For forecast, this will be predicted
+        data['Is_Flyable'] = 'No'  # Placeholder
     
     # --- NEW: XC POTENTIAL (The True Target) ---
     # Assuming 'max_daily_score' is the best flight of the day in points/km
-    data['XC_Result'] = pd.cut(
-        df['max_daily_score'].fillna(0), # 0 if nobody flew
-        bins=[-np.inf, 5, 15, 50, np.inf], 
-        labels=['A-Sled', 'B-Local', 'C-XC', 'D-Hammer']
-    )
+    if 'max_daily_score' in df.columns:
+        data['XC_Result'] = pd.cut(
+            df['max_daily_score'].fillna(0), # 0 if nobody flew
+            bins=[-np.inf, 5, 15, 50, np.inf], 
+            labels=['A-Sled', 'B-Local', 'C-XC', 'D-Hammer']
+        )
+    else:
+        # For forecast, this will be predicted
+        data['XC_Result'] = 'A-Sled'  # Placeholder
 
     return data.dropna() # BNs hate NaNs
 

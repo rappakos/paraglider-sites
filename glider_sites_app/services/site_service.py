@@ -1,7 +1,8 @@
 # services/site_service.py
 import asyncio
 from glider_sites_app.repositories.sites_repository import get_stats
-from glider_sites_app.analysis.model_loader import load_site_model
+from glider_sites_app.analysis.model_loader import load_site_model, load_bayesian_model
+from glider_sites_app.analysis.bayes_network import predict_from_raw_weather
 from glider_sites_app.services.weather_service import load_forecast_weather
 
 
@@ -45,8 +46,30 @@ async def get_forecast_data(site_name: str, start_date: str = '2025-06-01', end_
     weather_df = await load_forecast_weather(site_name, start_date, end_date)
     X = weather_df[rf_model['features']]
     # Run blocking predict in thread pool
-    predictions = await asyncio.to_thread(rf_model['model'].predict, X)
-    weather_df['predictions'] = predictions
+    rf_prediction = await asyncio.to_thread(rf_model['model'].predict, X)
+    weather_df['rf_prediction'] = rf_prediction
+
+    # Load Bayesian model and add predictions
+    bayesian_model_data = await asyncio.to_thread(load_bayesian_model, site_name)
+    if bayesian_model_data is not None:
+        # Run Bayesian prediction in thread pool
+        bayesian_predictions = await asyncio.to_thread(
+            predict_from_raw_weather, 
+            bayesian_model_data['model'], 
+            weather_df
+        )
+        
+        # Merge predictions into weather_df
+        weather_df['is_flyable'] = bayesian_predictions['predicted_flyable']
+        weather_df['is_flyable_prob'] = bayesian_predictions['is_flyable_prob']
+        weather_df['xc_potential'] = bayesian_predictions.apply(
+            lambda row: max(
+                (row['xc_local_prob'], 'Local'),
+                (row['xc_xc_prob'], 'XC'),
+                (row['xc_hammer_prob'], 'Hammer')
+            )[1] if row['is_flyable_prob'] > 0.5 else 'Sled',
+            axis=1
+        )
 
     forecast_data = {"forecast": weather_df.to_dict('records')}  
     return forecast_data

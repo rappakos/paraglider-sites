@@ -313,7 +313,7 @@ class XContestLoader:
                     
                     # Log first flight for debugging
                     if idx == 0:
-                        logger.info(f"First flight sample: {flight}")
+                        logger.debug(f"First flight sample: {flight}")
                     
                 except Exception as e:
                     logger.warning(f"Failed to extract row {idx}: {e}")

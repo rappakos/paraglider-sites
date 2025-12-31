@@ -5,7 +5,7 @@ from glider_sites_app.repositories.sites_repository import get_stats
 from glider_sites_app.schemas import SiteBase
 from ..tools.flights.dhv_loader import refresh_flight_list
 from ..tools.flights.xcontest_loader import load_xcontest_flights
-from ..repositories.flights_repository import save_dhv_flights, pilot_stats, load_flight_counts
+from ..repositories.flights_repository import get_last_xcontest_flight_date, save_dhv_flights, pilot_stats, load_flight_counts
 
 MIN_DATE = '2018-01-01'
 
@@ -103,8 +103,9 @@ async def sync_xcontest_flights(site_name: str):
         return
     lat, lon = site_info.iloc[0]['geo_latitude'], site_info.iloc[0]['geo_longitude']
 
-    # TODO get the last xcontest flight date for incremental loading
-    date_from = "2018-01-01"
+    date_from = await get_last_xcontest_flight_date(site_name) 
+    if date_from is None:
+        date_from = MIN_DATE
 
     username = os.getenv('XCONTEST_USERNAME')
     password = os.getenv('XCONTEST_PASSWORD')

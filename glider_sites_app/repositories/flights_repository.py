@@ -67,6 +67,24 @@ async def get_flights(site_name:str):
     finally:
         engine.dispose()
 
+async def get_last_xcontest_flight_date(site_name: str):
+    engine = create_engine(f'sqlite:///{DB_NAME}')
+    try:
+        with engine.connect() as db:
+            param = {'site_name': site_name}
+            result = db.execute(
+                text("SELECT MAX(flight_date) FROM xcontest_flights WHERE site_name = :site_name"),
+                param
+            ).fetchone()
+            if result and result[0]:
+                return result[0]
+            else:
+                return None
+    finally:
+        engine.dispose()
+
+
+
 async def save_dhv_flights(df_flights:DataFrame):
     columns_to_save = ['IDFlight', 'FlightDate', 'FlightStartTime', 'FKPilot', 
                        'Glider', 'GliderClassification', 'FlightDuration', 

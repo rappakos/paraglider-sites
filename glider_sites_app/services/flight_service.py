@@ -1,6 +1,7 @@
 # services/flight_service.py
 import logging
 import os
+import pandas as pd
 from glider_sites_app.repositories.sites_repository import get_stats
 from glider_sites_app.schemas import SiteBase
 from ..tools.flights.dhv_loader import refresh_flight_list
@@ -37,6 +38,10 @@ async def pilot_statistics():
 
 async def load_flight_data(site_name: str):
     res = await load_flight_counts(site_name)
+    resX = await get_xcontest_flight_counts(site_name)
+    if not resX.empty:
+        res = pd.concat([res, resX], ignore_index=True)
+
     pilot_stats = await pilot_statistics()
     res = res.merge(
         pilot_stats,
@@ -142,5 +147,6 @@ if __name__ == "__main__":
     #asyncio.run(sync_dhv_flights('Porta'))
     #asyncio.run(load_flight_data('Porta'))
     #asyncio.run(sync_dhv_flights('Brunsberg'))
-    asyncio.run(sync_xcontest_flights('Rammelsberg NW'))
-    #asyncio.run(xcontest_flight_count('Rammelsberg NW'))
+    #asyncio.run(sync_xcontest_flights('Rammelsberg NW'))
+    #asyncio.run(sync_xcontest_flights('Königszinne'))
+    asyncio.run(xcontest_flight_count('Königszinne'))

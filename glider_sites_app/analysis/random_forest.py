@@ -56,12 +56,12 @@ async def train_flight_predictor(site_name: str,
     # Train model
     model = RandomForestRegressor(
         n_estimators=200,
-        max_depth=10,
+        max_depth=5,
         random_state=42,
         n_jobs=-1
     ) if type=='regressor' else RandomForestClassifier(
         n_estimators=200,
-        max_depth=10,
+        max_depth=5,
         random_state=42,
         n_jobs=-1                
     )
@@ -131,7 +131,7 @@ if __name__ == '__main__':
     import asyncio
     do_save=False
     #asyncio.run(train_flight_predictor('Königszinne', 'classifier', save=do_save))
-    #asyncio.run(train_flight_predictor('Rammelsberg NW', 'classifier', save=do_save))
+    asyncio.run(train_flight_predictor('Rammelsberg NW', 'classifier', save=do_save))
     #asyncio.run(train_flight_predictor('Börry', 'classifier', save=do_save))
     #asyncio.run(train_flight_predictor('Porta', 'classifier', save=do_save))
-    asyncio.run(train_flight_predictor('Brunsberg', 'classifier', save=do_save))
+    #asyncio.run(train_flight_predictor('Brunsberg', 'classifier', save=do_save))

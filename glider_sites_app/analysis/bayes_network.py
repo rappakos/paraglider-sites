@@ -260,20 +260,26 @@ def predict_from_raw_weather(model, raw_weather_df):
                 'Pilot_Skill_Present': row['Pilot_Skill_Present']
             }
             
-            # Query the model
-            result = infer.query(variables=['Is_Flyable', 'XC_Result'], evidence=evidence)
+            # Query the model for each variable separately
+            flyable_result = infer.query(variables=['Is_Flyable'], evidence=evidence)
+            xc_result = infer.query(variables=['XC_Result'], evidence=evidence)
             
-            # Extract probabilities
-            flyable_prob = result['Is_Flyable'].values[1] if len(result['Is_Flyable'].values) > 1 else 0
-            xc_probs = result['XC_Result'].values
+            # Extract probabilities from DiscreteFactor objects
+            # The values are ordered alphabetically by state name
+            flyable_states = flyable_result.state_names['Is_Flyable']
+            flyable_values = flyable_result.values
+            flyable_prob = flyable_values[flyable_states.index('Yes')] if 'Yes' in flyable_states else 0
+            
+            xc_states = xc_result.state_names['XC_Result']
+            xc_values = xc_result.values
             
             predictions.append({
                 'date': raw_weather_df.iloc[idx].get('date', idx),
                 'is_flyable_prob': flyable_prob,
-                'xc_sled_prob': xc_probs[0] if len(xc_probs) > 0 else 0,
-                'xc_local_prob': xc_probs[1] if len(xc_probs) > 1 else 0,
-                'xc_xc_prob': xc_probs[2] if len(xc_probs) > 2 else 0,
-                'xc_hammer_prob': xc_probs[3] if len(xc_probs) > 3 else 0,
+                'xc_sled_prob': xc_values[xc_states.index('A-Sled')] if 'A-Sled' in xc_states else 0,
+                'xc_local_prob': xc_values[xc_states.index('B-Local')] if 'B-Local' in xc_states else 0,
+                'xc_xc_prob': xc_values[xc_states.index('C-XC')] if 'C-XC' in xc_states else 0,
+                'xc_hammer_prob': xc_values[xc_states.index('D-Hammer')] if 'D-Hammer' in xc_states else 0,
                 'predicted_flyable': 'Yes' if flyable_prob > 0.5 else 'No'
             })
         except Exception as e:

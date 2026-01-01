@@ -196,3 +196,6 @@ glider_sites.db
 *.db
 *.joblib
 xcontest*.png
+glider_sites_app/tools/weather/.cdsapirc
+.cdsapirc
+*.zip

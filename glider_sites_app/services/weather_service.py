@@ -4,8 +4,9 @@ from datetime import datetime, timedelta
 from pandas import DataFrame, to_datetime, cut
 
 from glider_sites_app.repositories.sites_repository import get_stats, get_main_direction
-from glider_sites_app.repositories.weather_repository import load_weather_data, save_weather_data
+from glider_sites_app.repositories.weather_repository import fix_temperature_850hPa_pre2020, load_weather_data, save_weather_data
 from glider_sites_app.tools.weather.constants import MIN_DATE
+from glider_sites_app.tools.weather.era5_reanalysis import extract_temperature_from_era5
 from glider_sites_app.tools.weather.openmeteo_loader import refresh_weather_data, load_new_forecast_data
 
 logging.basicConfig(level=logging.INFO)
@@ -190,28 +191,60 @@ def gust_factor(avg_wind, max_gust):
         return 1.0
     return 0.0
 
+
+async def fix_temp_850hpa_pre2020():
+
+    infos = await get_stats()  
+    # DONE
+    for year in []:
+        ds = extract_temperature_from_era5(year)
+        for index, row in infos.iterrows():
+            site_name, lat, lng = row['site_name'], row['geo_latitude'], row['geo_longitude']
+            logging.info(f"Processing site {site_name}...")
+
+            # Interpolate to site coordinates
+            site_data = ds.interp(latitude=lat, longitude=lng, method='linear')
+            
+            # Convert to DataFrame (now just time series for this location)
+            site_df = site_data.to_dataframe().reset_index()
+            
+            print(f"{site_name}: {len(site_df)} records")
+
+            site_df['site_name'] = site_name
+            site_df['date'] = site_df['valid_time'].dt.strftime('%Y-%m-%d')
+            site_df['temperature_850hPa'] = site_df['t'].astype(float) - 273.15  # Convert from Kelvin to Celsius
+
+            site_df = site_df[['site_name', 'date', 'temperature_850hPa']].groupby(['site_name','date']).mean().reset_index()
+
+            logging.info(site_df.head())
+
+            await fix_temperature_850hPa_pre2020(site_df)
+
+
 if __name__=='__main__':
     import asyncio
     import plotly.express as px
     #asyncio.run(sync_weather('Porta'))
     #asyncio.run(sync_weather('Brunsberg'))
     site_name = 'Börry'
-    weather = asyncio.run(load_agg_weather_data(site_name))
-    weather['gust_factor'] = weather.apply(lambda row: gust_factor(row['avg_wind_speed'], row['max_wind_gust']), axis=1)
+    #weather = asyncio.run(load_agg_weather_data(site_name))
+    #weather['gust_factor'] = weather.apply(lambda row: gust_factor(row['avg_wind_speed'], row['max_wind_gust']), axis=1)
 
     #fig = px.scatter(weather,x='avg_wind_speed', y='max_wind_gust', color='gust_factor', title=f'Wind Gust Factor for {site_name}')
     #fig.update_xaxes(range=[0,30])
     #fig.update_yaxes(range=[0,40])
     #fig.write_image("wind_gusts.png")
     
-    for avg_wind in [8,16,24]:
-        for max_gust in [16,24,32,38] if avg_wind<=16 else [24,32,36]:
-            gust_fac= gust_factor(avg_wind, max_gust)
-            print(f"{avg_wind:2} | {max_gust:2} | {gust_fac} ")
+    #for avg_wind in [8,16,24]:
+    #    for max_gust in [16,24,32,38] if avg_wind<=16 else [24,32,36]:
+    #        gust_fac= gust_factor(avg_wind, max_gust)
+    #       print(f"{avg_wind:2} | {max_gust:2} | {gust_fac} ")
 
-    turbulence= cut(
-        weather['gust_factor'], 
-        bins=[-np.inf, 1.,2., 3., np.inf], 
-        labels=['Smooth','OK', 'Gusty', 'Dangerous']
-    )
-    print(turbulence.value_counts())
+    #turbulence= cut(
+    #    weather['gust_factor'], 
+    #    bins=[-np.inf, 1.,2., 3., np.inf], 
+    #    labels=['Smooth','OK', 'Gusty', 'Dangerous']
+    #)
+    #print(turbulence.value_counts())
+
+    asyncio.run(fix_temp_850hpa_pre2020())  

@@ -28,13 +28,31 @@ async def load_weather_data(site_name: str) -> DataFrame:
                         temperature_850hPa,
                         wind_speed_850hPa
                     FROM weather_data
-                    WHERE site_name = :site_name and DATE(time) >= '2022-01-01'  """),
+                    WHERE site_name = :site_name
+                        -- and DATE(time) >= '2022-01-01'  """),
                 db,
                 params={'site_name': site_name}
             )
         return df
     finally:
         engine.dispose()
+
+async def fix_temperature_850hPa_pre2020(df_weather: DataFrame):
+    """Fix temperature_850hPa for pre-2020 data using some external source (placeholder)"""
+    
+    # Prepare data: (temperature, site_name, date)
+    updates = df_weather[['temperature_850hPa', 'site_name', 'date']].values.tolist()
+
+    sql = f"""UPDATE weather_data
+            SET temperature_850hPa = ?
+            WHERE (temperature_850hPa IS NULL OR temperature_850hPa = 0)
+              AND site_name = ?
+              AND DATE(time) = ?"""
+
+    async with aiosqlite.connect(DB_NAME) as db:
+        rows = await db.executemany(sql, updates)
+        print(f"Updated {rows.rowcount} rows with fixed temperature_850hPa for {df_weather['site_name'].iloc[0]}")
+        await db.commit()
 
 
 async def save_weather_data(df_weather: DataFrame):

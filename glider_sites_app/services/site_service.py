@@ -41,13 +41,15 @@ async def get_forecast_data(site_name: str, start_date: str = '2025-06-01', end_
     rf_model = await asyncio.to_thread(load_site_model, site_name, type='classifier')
     if rf_model is None:
         return None
-  
 
     weather_df = await load_forecast_weather(site_name, start_date, end_date)
     X = weather_df[rf_model['features']]
     # Run blocking predict in thread pool
     rf_prediction = await asyncio.to_thread(rf_model['model'].predict, X)
     weather_df['rf_prediction'] = rf_prediction
+    # Fraction of trees voting for the predicted class
+    rf_proba = await asyncio.to_thread(rf_model['model'].predict_proba, X)    
+    weather_df['rf_confidence'] = rf_proba.max(axis=1)
 
     # Load Bayesian model and add predictions
     bayesian_model_data = await asyncio.to_thread(load_bayesian_model, site_name)

@@ -3,6 +3,7 @@
 import logging
 import pandas as pd
 import numpy as np
+from glider_sites_app.services.weather_service import gust_factor
 from pgmpy.models import DiscreteBayesianNetwork as BayesianNetwork
 from pgmpy.estimators import MaximumLikelihoodEstimator
 from pgmpy.inference import VariableElimination
@@ -36,8 +37,6 @@ def discretize_data(df):
     # | Is_Flyable          | 2–3         |
     # | XC_Result           | 3 (maybe 4) |
 
-
-
     # --- 1. WIND STATE (The Mechanical Energy) ---
     # < 1.5 m/s  Calm             -> < 5.4 km/h
     # 1.5 -3.5 m/s  Ideal         -> 5.4 - 12.6 km/h
@@ -54,14 +53,15 @@ def discretize_data(df):
 
     # --- 2. GUST FACTOR (The Turbulence) ---    
     # Gust Factor = Max Gust / Avg Speed
-    # TODO Adjust bins - 1 more?
-    # < 1.5: Smooth Laminar
-    # > 1.8: Dangerous Turbulence
-    gust_factor = df['max_wind_gust'] / (df['avg_wind_speed'] + 1) # +1 avoids div/0
+    V0 = 6 # stabilize weak ground winds
+    #  avg_wind_speed | max_wind_gust | gust_factor
+    # 
+
+    gust_fac = gust_factor(df['avg_wind_speed'],df['max_wind_gust'])
     data['Turbulence_State'] = pd.cut(
-        gust_factor, 
-        bins=[-np.inf, 1.5, 1.8, np.inf], 
-        labels=['Smooth', 'Gusty', 'Dangerous']
+        gust_fac, 
+        bins=[-np.inf, 1.,2., 3., np.inf], 
+        labels=['Smooth','OK', 'Gusty', 'Dangerous']
     )
     
     # --- 3. ALIGNMENT (The Geometry) ---
@@ -125,13 +125,8 @@ def discretize_data(df):
     if 'is_workingday' in df.columns:
         data['Social_Window'] = df['is_workingday'].map({1: 'Low', 0: 'High'})
     else:
-        # For forecast data, infer from date (weekends = High participation)
-        if 'date' in df.columns:
-            dates = pd.to_datetime(df['date'])
-            data['Social_Window'] = dates.dt.dayofweek.apply(lambda x: 'High' if x >= 5 else 'Low')
-        else:
-            # Default to High for forecasts
-            data['Social_Window'] = 'High'
+        # Default to High for forecasts
+        data['Social_Window'] = 'High'
 
     if 'best_score' in df.columns:
         data['Pilot_Skill_Present'] = pd.cut(
@@ -142,6 +137,15 @@ def discretize_data(df):
     else:
         # For forecast data, assume intermediate skill level
         data['Pilot_Skill_Present'] = 'Intermediate'
+
+    # --- MODEL CONFIDENCE (From RF Model) ---
+    # This is actually the majority fraction from the RF
+    if 'rf_confidence' in df.columns:
+        data['Model_Confidence'] = pd.cut(
+            df['rf_confidence'],
+            bins=[-np.inf, 0.6, 0.8, np.inf],
+            labels=['Low', 'Medium', 'High']
+        )
 
 
     # --- TARGETS (What we want to predict) ---
@@ -256,8 +260,8 @@ def predict_from_raw_weather(model, raw_weather_df):
                 'Alignment_State': row['Alignment_State'],
                 'Thermal_Quality': row['Thermal_Quality'],
                 'Ceiling_State': row['Ceiling_State'],
-                'Social_Window': row['Social_Window'],
-                'Pilot_Skill_Present': row['Pilot_Skill_Present']
+                'Social_Window': row['Social_Window'], # High for forecasts
+                'Pilot_Skill_Present': row['Pilot_Skill_Present'] # Intermediate for forecasts
             }
             
             # Query the model for each variable separately
@@ -307,7 +311,7 @@ async def flight_predictor(site_name: str, save_model: bool = False):
 
     logger.debug("\n=== Data Distribution ===")
     for col in df_bn.columns:
-        logger.debug(f"{col}: {df_bn[col].value_counts().to_dict()}")
+        logger.info(f"{col}: {df_bn[col].value_counts().to_dict()}")
 
 
     # 3. Create Intermediate "Truth" Columns
@@ -373,11 +377,11 @@ if __name__ == '__main__':
     import asyncio
     
     # Train and save model
-    #asyncio.run(flight_predictor('Rammelsberg NW', save_model=True))
+    asyncio.run(flight_predictor('Rammelsberg NW', save_model=True))
     #asyncio.run(flight_predictor('Königszinne', save_model=True))
     #asyncio.run(flight_predictor('Börry', save_model=True))
     #asyncio.run(flight_predictor('Porta', save_model=True))
-    asyncio.run(flight_predictor('Brunsberg', save_model=True))
+    #asyncio.run(flight_predictor('Brunsberg', save_model=True))
 
     # Example: Load model and make predictions
     # from glider_sites_app.analysis.model_loader import load_bayesian_model

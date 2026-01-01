@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 from datetime import datetime, timedelta
-from pandas import DataFrame, to_datetime
+from pandas import DataFrame, to_datetime, cut
 
 from glider_sites_app.repositories.sites_repository import get_stats, get_main_direction
 from glider_sites_app.repositories.weather_repository import load_weather_data, save_weather_data
@@ -165,8 +165,53 @@ async def sync_weather(site_name:str):
     df['site_name'] = site_name
     await save_weather_data(df)
 
+def gust_factor(avg_wind, max_gust):
+    """Calculate wind gust factor based on average wind speed and maximum wind gust
+        Using contours of  max_gust = b(g) + (C(g) - b(g)) * avg_wind / (C(g) - b(g) + avg_wind )
+        And b(g) = 2 v0 g - v0, C(g) = Vmax - v0*n + v0*g, with n=4, v0=4.5 km/h and Vmax = 36 km/h
+    """
+    V0 = 4.5
+    n = 4
+    Vmax = 36.0
+    def b(g):
+        return 2 * V0 * g - V0
+    def C(g):
+        return Vmax - V0 * n + V0 * g
+    def Y(g, avg_wind):
+        return b(g) + (C(g) - b(g)) * avg_wind / (C(g) - b(g) + avg_wind )
+    
+    if max_gust > Y(4, avg_wind):
+        return 4.0
+    if max_gust > Y(3, avg_wind):
+        return 3.0
+    if max_gust > Y(2, avg_wind):
+        return 2.0
+    if max_gust > Y(1, avg_wind):
+        return 1.0
+    return 0.0
 
 if __name__=='__main__':
     import asyncio
+    import plotly.express as px
     #asyncio.run(sync_weather('Porta'))
-    asyncio.run(sync_weather('Brunsberg'))
+    #asyncio.run(sync_weather('Brunsberg'))
+    site_name = 'Börry'
+    weather = asyncio.run(load_agg_weather_data(site_name))
+    weather['gust_factor'] = weather.apply(lambda row: gust_factor(row['avg_wind_speed'], row['max_wind_gust']), axis=1)
+
+    #fig = px.scatter(weather,x='avg_wind_speed', y='max_wind_gust', color='gust_factor', title=f'Wind Gust Factor for {site_name}')
+    #fig.update_xaxes(range=[0,30])
+    #fig.update_yaxes(range=[0,40])
+    #fig.write_image("wind_gusts.png")
+    
+    for avg_wind in [8,16,24]:
+        for max_gust in [16,24,32,38] if avg_wind<=16 else [24,32,36]:
+            gust_fac= gust_factor(avg_wind, max_gust)
+            print(f"{avg_wind:2} | {max_gust:2} | {gust_fac} ")
+
+    turbulence= cut(
+        weather['gust_factor'], 
+        bins=[-np.inf, 1.,2., 3., np.inf], 
+        labels=['Smooth','OK', 'Gusty', 'Dangerous']
+    )
+    print(turbulence.value_counts())

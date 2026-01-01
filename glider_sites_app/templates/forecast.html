@@ -3,6 +3,16 @@
 {% set title = "Forecast" %}
 
 {% block content %}
+
+<div class="w3-container w3-margin-bottom">
+    <form method="GET" action="/forecast">
+        <label for="start_date">Start Date:</label>
+        <input type="date" id="start_date" name="start_date" value="{{ start_date or '' }}">
+        
+        <button type="submit" class="w3-button w3-blue">Update</button>
+    </form>
+</div>
+
 <table class="w3-table w3-bordered">
     <thead>
         <tr>
@@ -28,7 +38,7 @@
                     {% if site.get('forecast') and site.forecast.forecast %}
                         {% for day in site.forecast.forecast[:7] %}
                             <td class="{{ 'A' if day.rf_prediction == 1 else 'C' }}">
-                                {{ day.rf_prediction }}
+                               RF: {{ day.rf_prediction }} ({{(day.rf_confidence*100)|round(1)}}%) vs BN: {{ day.is_flyable}}
                             </td>
                         {% endfor %}
                     {% else %}

@@ -1,10 +1,13 @@
 # services/site_service.py
 import asyncio
+import logging
 from glider_sites_app.repositories.sites_repository import get_stats
 from glider_sites_app.analysis.model_loader import load_site_model, load_bayesian_model
 from glider_sites_app.analysis.bayes_network import predict_from_raw_weather
 from glider_sites_app.services.weather_service import load_forecast_weather
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 async def get_all_sites():
     """Get all paraglider sites with statistics"""
@@ -72,6 +75,8 @@ async def get_forecast_data(site_name: str, start_date: str = '2025-06-01', end_
             )[1] if row['is_flyable_prob'] > 0.5 else 'Sled',
             axis=1
         )
+
+    logging.debug(weather_df.columns.values)
 
     forecast_data = {"forecast": weather_df.to_dict('records')}  
     return forecast_data

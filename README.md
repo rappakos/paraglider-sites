@@ -1,6 +1,9 @@
 # paraglider-sites
 Connect paragliding flights and weather data
 
+## Paper
+
+
 ## 🚀 FastAPI Version Available!
 
 This project has been migrated to **FastAPI** with added machine learning capabilities:

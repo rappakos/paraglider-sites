@@ -85,7 +85,7 @@ async def forecast_page(
             site['forecast'] = forecast
         else:
             site['has_model'] = False
-    return templates.TemplateResponse("forecast.html", {"request": request, "data": site_data})
+    return templates.TemplateResponse("forecast.html", {"request": request,"start_date": start_date,  "data": site_data})
 
 @page_router.get("/site/{site_name}")
 async def site_details(request: Request, site_name: str):

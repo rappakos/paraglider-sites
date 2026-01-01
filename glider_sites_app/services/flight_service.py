@@ -148,5 +148,5 @@ if __name__ == "__main__":
     #asyncio.run(load_flight_data('Porta'))
     #asyncio.run(sync_dhv_flights('Brunsberg'))
     #asyncio.run(sync_xcontest_flights('Rammelsberg NW'))
-    #asyncio.run(sync_xcontest_flights('Königszinne'))
-    asyncio.run(xcontest_flight_count('Königszinne'))
+    asyncio.run(sync_xcontest_flights('Brunsberg'))
+    #asyncio.run(xcontest_flight_count('Königszinne'))

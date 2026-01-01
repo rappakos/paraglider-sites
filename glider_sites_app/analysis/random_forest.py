@@ -5,12 +5,15 @@ import pandas as pd
 import numpy as np
 from typing import Literal
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score, f1_score
+from sklearn.model_selection import cross_val_score, cross_validate
+
 
 from glider_sites_app.analysis.data_preparation import prepare_training_data
 from glider_sites_app.analysis.model_loader import save_results
 
+
+SEED = 431
+k_folds = 5
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -44,51 +47,33 @@ async def train_flight_predictor(site_name: str,
         ]
     X = df[features]
     y = np.log1p(df['flight_count']) if type=='regressor' else df['flight_count'] > 0
-    
-    # Split data
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=test_size, random_state=42
-    )
-    
-    logger.info(f"Training set: {len(X_train)} days")
-    logger.info(f"Test set: {len(X_test)} days")
-    
-    # Train model
+   
+    # Initialize model
     model = RandomForestRegressor(
         n_estimators=200,
         max_depth=5,
-        random_state=42,
+        random_state=SEED,
         n_jobs=-1
     ) if type=='regressor' else RandomForestClassifier(
         n_estimators=200,
         max_depth=5,
-        random_state=42,
+        random_state=SEED,
         n_jobs=-1                
     )
     
-    model.fit(X_train, y_train)
-    
-    # Evaluate
-    y_pred_train = model.predict(X_train)
-    y_pred_test = model.predict(X_test)
-    
+    # K-fold cross validation
     if type == 'classifier':
-        # Classification metrics
-        train_f1 = f1_score(y_train, y_pred_train)
-        test_f1 = f1_score(y_test, y_pred_test)
-        
-        logger.info(f"Train F1: {train_f1:.3f}")
-        logger.info(f"Test F1: {test_f1:.3f}")
-        #logger.info(f"Classification Report:\n{classification_report(y_test, y_pred_test)}")
+        cv_scores = cross_val_score(model, X, y, cv=k_folds, scoring='f1', n_jobs=-1)
+        logger.info(f"{k_folds}-fold CV F1 scores: {cv_scores}")
+        logger.info(f"Mean CV F1: {cv_scores.mean():.3f} (+/- {cv_scores.std() * 2:.3f})")
     else:
-        # Regression metrics
-        train_rmse = np.sqrt(mean_squared_error(y_train, y_pred_train))
-        test_rmse = np.sqrt(mean_squared_error(y_test, y_pred_test))
-        train_r2 = r2_score(y_train, y_pred_train)
-        test_r2 = r2_score(y_test, y_pred_test)
-        
-        logger.info(f"Train RMSE: {train_rmse:.2f}, R²: {train_r2:.3f}")
-        logger.info(f"Test RMSE: {test_rmse:.2f}, R²: {test_r2:.3f}")
+        cv_scores = cross_val_score(model, X, y, cv=k_folds, scoring='neg_root_mean_squared_error', n_jobs=-1)
+        logger.info(f"{k_folds}-fold CV RMSE scores: {-cv_scores}")
+        logger.info(f"Mean CV RMSE: {-cv_scores.mean():.3f} (+/- {cv_scores.std() * 2:.3f})")
+    
+    # Train final model on full dataset
+    logger.info(f"Training final model on full dataset ({len(X)} days)")
+    model.fit(X, y)
     
     # Feature importance
     importance = pd.DataFrame({
@@ -105,21 +90,6 @@ async def train_flight_predictor(site_name: str,
         'feature_importance': importance
     }
     
-    # Add type-specific metrics
-    if type == 'classifier':
-        result.update({
-            'train_f1': train_f1,
-            'test_f1': test_f1
-        })
-    else:
-        result.update({
-            'train_rmse': train_rmse,
-            'test_rmse': test_rmse,
-            'train_r2': train_r2,
-            'test_r2': test_r2
-        })
-    
-
     if save:
         save_results(site_name, type, result)
 
@@ -129,9 +99,9 @@ async def train_flight_predictor(site_name: str,
 
 if __name__ == '__main__':
     import asyncio
-    do_save=False
-    #asyncio.run(train_flight_predictor('Königszinne', 'classifier', save=do_save))
+    do_save=True
+    asyncio.run(train_flight_predictor('Königszinne', 'classifier', save=do_save))
     asyncio.run(train_flight_predictor('Rammelsberg NW', 'classifier', save=do_save))
-    #asyncio.run(train_flight_predictor('Börry', 'classifier', save=do_save))
-    #asyncio.run(train_flight_predictor('Porta', 'classifier', save=do_save))
-    #asyncio.run(train_flight_predictor('Brunsberg', 'classifier', save=do_save))
+    asyncio.run(train_flight_predictor('Börry', 'classifier', save=do_save))
+    asyncio.run(train_flight_predictor('Porta', 'classifier', save=do_save))
+    asyncio.run(train_flight_predictor('Brunsberg', 'classifier', save=do_save))

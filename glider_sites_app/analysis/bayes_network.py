@@ -57,7 +57,7 @@ def discretize_data(df):
     #  avg_wind_speed | max_wind_gust | gust_factor
     # 
 
-    gust_fac = gust_factor(df['avg_wind_speed'],df['max_wind_gust'])
+    gust_fac = df.apply(lambda row: gust_factor(row['avg_wind_speed'], row['max_wind_gust']), axis=1)
     data['Turbulence_State'] = pd.cut(
         gust_fac, 
         bins=[-np.inf, 1.,2., 3., np.inf], 
@@ -377,8 +377,8 @@ if __name__ == '__main__':
     import asyncio
     
     # Train and save model
-    asyncio.run(flight_predictor('Rammelsberg NW', save_model=True))
-    #asyncio.run(flight_predictor('Königszinne', save_model=True))
+    #asyncio.run(flight_predictor('Rammelsberg NW', save_model=True))
+    asyncio.run(flight_predictor('Königszinne', save_model=True))
     #asyncio.run(flight_predictor('Börry', save_model=True))
     #asyncio.run(flight_predictor('Porta', save_model=True))
     #asyncio.run(flight_predictor('Brunsberg', save_model=True))

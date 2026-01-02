@@ -108,13 +108,13 @@ def discretize_data(df):
 
     # Create the 'Shear' variable (Absolute difference in speed)
     # Ideally vector difference, but scalar diff is a good proxy
-    df['wind_shear'] = (df['wind_speed_850hPa'] - df['avg_wind_speed']).abs()
+    #df['wind_shear'] = (df['wind_speed_850hPa'] - df['avg_wind_speed']).abs()
 
-    data['Shear_State'] = pd.cut(
-        df['wind_shear'],
-        bins=[-np.inf, 10, 20, np.inf],
-        labels=['Low', 'Moderate', 'High'] # >20km/h diff usually kills thermals
-    )
+    #data['Shear_State'] = pd.cut(
+    #    df['wind_shear'],
+    #    bins=[-np.inf, 10, 20, np.inf],
+    #    labels=['Low', 'Moderate', 'High'] # >20km/h diff usually kills thermals
+    #)
 
     data['Wind_850_State'] = pd.cut(
         df['wind_speed_850hPa'],
@@ -144,7 +144,7 @@ def discretize_data(df):
     if 'rf_confidence' in df.columns:
         data['RF_Flyability_Confidence'] = pd.cut(
             df.apply(lambda row: row['rf_confidence'] if row['rf_prediction'] else 1.0 - row['rf_confidence'], axis=1),
-            bins=[-np.inf, 0.5, 0.8, np.inf],
+            bins=[-np.inf, 0.33, 0.67, np.inf],
             labels=['Low', 'Medium', 'High']
         )
 
@@ -354,14 +354,14 @@ async def flight_predictor(site_name: str, save_model: bool = False):
     logger.info("\n=== SCENARIO 1: The 'Windy but Aligned' Day ===")
     logger.info("Wind: Strong, Alignment: Perfect, Lapse: Stable")
     q1 = infer.query(
-        variables=['Is_Flyable', 'XC_Result'], 
+        variables=['XC_Result'], 
         evidence={
             'Wind_State': 'Strong', 
             'Alignment_State': 'Perfect', 
             'Thermal_Quality': 'Stable',
             #'Wind_850_State': 'Strong',
-            'Social_Window': 'High' # assume weekend
-            , 'Pilot_Skill_Present': 'Intermediate'
+            'Is_Flyable': 'Yes',
+            'Pilot_Skill_Present': 'Intermediate'
         }
     )
     logger.info(q1)
@@ -386,10 +386,11 @@ if __name__ == '__main__':
     import asyncio
     
     # Train and save model
-    asyncio.run(flight_predictor('Rammelsberg NW', save_model=False))
-    #asyncio.run(flight_predictor('Königszinne', save_model=True))
-    #asyncio.run(flight_predictor('Börry', save_model=True))
-    #asyncio.run(flight_predictor('Porta', save_model=True))
-    #asyncio.run(flight_predictor('Brunsberg', save_model=True))
+    save=False
+    asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
+    asyncio.run(flight_predictor('Königszinne', save_model=save))
+    asyncio.run(flight_predictor('Börry', save_model=save))
+    asyncio.run(flight_predictor('Porta', save_model=save))
+    asyncio.run(flight_predictor('Brunsberg', save_model=save))
 
     

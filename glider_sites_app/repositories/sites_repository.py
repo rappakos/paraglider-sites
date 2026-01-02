@@ -19,7 +19,7 @@ async def get_stats() -> DataFrame:
         SELECT site_name, MAX(FlightDate) as last_flight_date, COUNT(DISTINCT IDFlight) as flight_count
             , COUNT(DISTINCT DATE(FlightDate)) as total_flight_days
         FROM dhv_flights
-            WHERE FlightDate > '2022-01-01'
+            --WHERE FlightDate > '2022-01-01'
         GROUP BY site_name
     ) f ON f.site_name = s.site_name
     LEFT JOIN (

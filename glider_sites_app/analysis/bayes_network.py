@@ -1,5 +1,6 @@
 # analysis/bayes_network.py
 
+import asyncio
 import logging
 import pandas as pd
 import numpy as np
@@ -9,7 +10,7 @@ from pgmpy.estimators import MaximumLikelihoodEstimator
 from pgmpy.inference import VariableElimination
 
 from glider_sites_app.analysis.data_preparation import prepare_training_data
-from glider_sites_app.analysis.model_loader import save_bayesian_model, load_bayesian_model
+from glider_sites_app.analysis.model_loader import save_bayesian_model, load_bayesian_model, load_site_model
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,6 +21,10 @@ def discretize_data(df):
     Returns a new DataFrame suitable for the Bayesian Network.
     """
     data = pd.DataFrame()
+
+    filter = df['date'].astype(str) >= '2022-01-01' # wind @ 850hPa and other data not available before
+    df = df[filter]
+
     
     # ChatGPT Suggested Discretization Bins:
     # | Node                | Bins        |
@@ -52,11 +57,8 @@ def discretize_data(df):
     )
 
     # --- 2. GUST FACTOR (The Turbulence) ---    
-    # Gust Factor = Max Gust / Avg Speed
-    V0 = 6 # stabilize weak ground winds
-    #  avg_wind_speed | max_wind_gust | gust_factor
-    # 
-
+    # Gust Factor 
+    # Non-trivial expression based on base wind and max gust
     gust_fac = df.apply(lambda row: gust_factor(row['avg_wind_speed'], row['max_wind_gust']), axis=1)
     data['Turbulence_State'] = pd.cut(
         gust_fac, 
@@ -91,7 +93,6 @@ def discretize_data(df):
     data['Thermal_Quality'] = pd.cut(
         df[lr_col],
         bins=[-np.inf, 3.57,5.36, 7.14, np.inf],
-        #labels=['Stable', 'Weak', 'Booming']
         labels=['Stable', 'Weak', 'OK', 'Great']
     )
 
@@ -138,15 +139,14 @@ def discretize_data(df):
         # For forecast data, assume intermediate skill level
         data['Pilot_Skill_Present'] = 'Intermediate'
 
-    # --- MODEL CONFIDENCE (From RF Model) ---
+    # ---RF MODEL CONFIDENCE in flyability ---
     # This is actually the majority fraction from the RF
     if 'rf_confidence' in df.columns:
-        data['Model_Confidence'] = pd.cut(
-            df['rf_confidence'],
-            bins=[-np.inf, 0.6, 0.8, np.inf],
+        data['RF_Flyability_Confidence'] = pd.cut(
+            df.apply(lambda row: row['rf_confidence'] if row['rf_prediction'] else 1.0 - row['rf_confidence'], axis=1),
+            bins=[-np.inf, 0.5, 0.8, np.inf],
             labels=['Low', 'Medium', 'High']
         )
-
 
     # --- TARGETS (What we want to predict) ---
     # Binary Flyability
@@ -156,7 +156,7 @@ def discretize_data(df):
         # For forecast, this will be predicted
         data['Is_Flyable'] = 'No'  # Placeholder
     
-    # --- NEW: XC POTENTIAL (The True Target) ---
+    # --- XC POTENTIAL (The True Target) ---
     # Assuming 'max_daily_score' is the best flight of the day in points/km
     if 'max_daily_score' in df.columns:
         data['XC_Result'] = pd.cut(
@@ -211,6 +211,7 @@ def build_and_train_network(df_discrete):
         ('Launch_Safety',    'Is_Flyable'),
         ('Site_Mechanics',   'Is_Flyable'),
         ('Social_Window',   'Is_Flyable'),
+        ('RF_Flyability_Confidence', 'Is_Flyable'),
 
         # --- LAYER 3: Output ---
         # How good is the flight? (Requires Flyability AND Lift)
@@ -302,6 +303,14 @@ async def flight_predictor(site_name: str, save_model: bool = False):
     # Prepare data
     df = await prepare_training_data(site_name,use_workingdays=True)
     
+    # Include rf model predictions if available
+    rf_model = await asyncio.to_thread(load_site_model, site_name, type='classifier')
+    if rf_model is not None:
+        X = df[rf_model['features']]
+        df['rf_prediction'] = rf_model['model'].predict(X)
+        df['rf_confidence'] = rf_model['model'].predict_proba(X).max(axis=1)
+        logger.info(f"Included RF model predictions for Bayesian training.")
+
     if len(df) < 50:
         logger.error(f"Insufficient data: only {len(df)} days available")
         return None
@@ -334,7 +343,7 @@ async def flight_predictor(site_name: str, save_model: bool = False):
         save_bayesian_model(model, site_name, features)
 
     # TEST RELOAD
-    loaded_model_data = load_bayesian_model(site_name)
+    loaded_model_data = None # load_bayesian_model(site_name)
     if loaded_model_data:
         infer = VariableElimination(loaded_model_data['model'])
         logger.info(f"Loaded model with features: {loaded_model_data['features']}")
@@ -367,7 +376,7 @@ async def flight_predictor(site_name: str, save_model: bool = False):
             'Ceiling_State': 'High',
             #'Wind_850_State': 'Light',
             'Is_Flyable': 'Yes' # We assume we launched
-            , 'Pilot_Skill_Present': 'Intermediate'
+            , 'Pilot_Skill_Present': 'Pro'
         }
     )
     logger.info(q2)
@@ -377,16 +386,10 @@ if __name__ == '__main__':
     import asyncio
     
     # Train and save model
-    #asyncio.run(flight_predictor('Rammelsberg NW', save_model=True))
-    asyncio.run(flight_predictor('Königszinne', save_model=True))
+    asyncio.run(flight_predictor('Rammelsberg NW', save_model=False))
+    #asyncio.run(flight_predictor('Königszinne', save_model=True))
     #asyncio.run(flight_predictor('Börry', save_model=True))
     #asyncio.run(flight_predictor('Porta', save_model=True))
     #asyncio.run(flight_predictor('Brunsberg', save_model=True))
 
-    # Example: Load model and make predictions
-    # from glider_sites_app.analysis.model_loader import load_bayesian_model
-    # loaded_model = load_bayesian_model('Rammelsberg NW')
-    # if loaded_model:
-    #     predictions = predict_from_raw_weather(loaded_model['model'], raw_weather_df)
-    #     print(predictions)
     

@@ -52,6 +52,22 @@ NETWORK_GRAPH = [
         ('Pilot_Skill_Present', 'XC_Result')
     ]
 
+STATE_NAMES = {
+    'Wind_State':        ['Calm', 'Ideal', 'Strong', 'Very Strong', 'Extreme'],
+    'Turbulence_State':  ['Smooth','OK', 'Gusty', 'Dangerous'],
+    'Alignment_State':   ['Cross', 'Okay', 'Perfect'],
+    'Thermal_Quality':   ['Stable', 'Weak', 'OK', 'Great'],
+    'Ceiling_State':     ['Low', 'Average', 'High'],
+    'Launch_Safety':    ['Safe', 'Unsafe'],
+    'Site_Mechanics':   ['On', 'Off'],
+    'Lift_Potential':   ['Good', 'Bad'],
+    'Social_Window':    ['Low', 'High'],
+    'Pilot_Skill_Present': ['Basic', 'Intermediate', 'Pro'],
+    'RF_Flyability_Confidence': ['Low', 'Medium', 'High'],
+    'Is_Flyable':       ['No', 'Yes'],
+    'XC_Result':        ['A-Sled', 'B-Local', 'C-XC', 'D-Hammer'],
+    'Avg_Flight_Duration': ['A-Abgleiter', 'B-Soaring', 'C-Good', 'D-Epic']
+}
 
 
 def discretize_data(df):
@@ -246,6 +262,7 @@ def get_formatted_pseudo_counts(model, global_counts, site_df):
     
     for node in model.nodes():
         # TODO Handle nodes with parents
+        print(node)
             
     return formatted_pseudo_counts
 

@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 from glider_sites_app.services.weather_service import gust_factor
 from pgmpy.models import DiscreteBayesianNetwork as BayesianNetwork
-from pgmpy.estimators import MaximumLikelihoodEstimator
+from pgmpy.estimators import MaximumLikelihoodEstimator,BayesianEstimator
 from pgmpy.inference import VariableElimination
 
 from glider_sites_app.analysis.data_preparation import prepare_training_data
@@ -237,22 +237,47 @@ def add_intermediate_states(df_discrete):
     return df_discrete
 
 
-def build_and_train_network(df_discrete, skip_fit:bool=False):
+def get_formatted_pseudo_counts(model, global_counts, site_df):
+    """
+    Transforms flat global counts into the (node_card, product_of_parents_card) 
+    shape required by pgmpy.
+    """
+    formatted_pseudo_counts = {}
+    
+    for node in model.nodes():
+        # TODO Handle nodes with parents
+            
+    return formatted_pseudo_counts
+
+
+async def build_and_train_network(df_discrete, skip_fit:bool=False):
 
     model = BayesianNetwork(NETWORK_GRAPH)
 
     if skip_fit:
         # to get the global prior counts only
         return model
-
-    # Connect the learned data to the nodes
-    # This automatically maps column names to nodes.
-    # We must rename our DF columns to match these node names exactly.
-    # (Mapping logic is below in the main execution block)
     
     logger.info("Training Bayesian Network...")
-    model.fit(df_discrete, estimator=MaximumLikelihoodEstimator)
+
+    global_prior_counts = await get_global_prior_counts(recalculate=False)
+
+    formatted_pseudo_counts = get_formatted_pseudo_counts(model, global_prior_counts, df_discrete)
+
+    estimator = MaximumLikelihoodEstimator(model, df_discrete)
+    cpds = estimator.get_parameters()
+
+    #estimator = BayesianEstimator(model, df_discrete)
+    #cpds = estimator.get_parameters(
+    #    prior_type='dirichlet', 
+    #    pseudo_counts=formatted_pseudo_counts, 
+    #    equivalent_sample_size=10 
+    #)    
     
+    model.add_cpds(*cpds)    
+
+    logger.info(f"Model consistent: {model.check_model()}")
+
     return model
 
 
@@ -385,7 +410,7 @@ async def get_global_prior_counts(recalculate: bool = False):
         logger.debug(f"{col}: {global_df[col].value_counts().to_dict()}")
 
     # if this is reworked then global_df does not need to be passed here?!
-    model = build_and_train_network(global_df, skip_fit=True)
+    model = await build_and_train_network(global_df, skip_fit=True)
 
     global_prior_counts = {node: global_df[node].value_counts().to_dict() if node != 'Alignment_State' else {'Cross':100, 'Okay':100, 'Perfect':100}
                              for node in model.nodes()}
@@ -411,7 +436,7 @@ async def flight_predictor(site_name: str, save_model: bool = False):
 
 
     # 4. Train
-    model = build_and_train_network(df_bn)
+    model = await build_and_train_network(df_bn)
 
     logging.debug((model.get_cpds('XC_Result')))
     
@@ -468,11 +493,11 @@ if __name__ == '__main__':
     import asyncio
     
     # Set up global counts
-    asyncio.run(get_global_prior_counts(recalculate=False))
+    #asyncio.run(get_global_prior_counts(recalculate=True))
 
     # Train and save model
     save=False
-    #asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
+    asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
     #asyncio.run(flight_predictor('Königszinne', save_model=save))
     #asyncio.run(flight_predictor('Börry', save_model=save))
     #asyncio.run(flight_predictor('Porta', save_model=save))

@@ -17,11 +17,18 @@ async def load_flight_counts(site_name: str) -> DataFrame:
                         COUNT(*) as flight_count,
                         MAX(BestTaskPoints) as max_daily_score,
                         (SELECT FKPilot 
-                         FROM dhv_flights f2 
-                         WHERE f2.site_name = f.site_name 
-                           AND f2.FlightDate = f.FlightDate 
-                         ORDER BY BestTaskPoints DESC 
-                         LIMIT 1) as best_pilot_id
+                                FROM dhv_flights f2 
+                                WHERE f2.site_name = f.site_name 
+                                AND f2.FlightDate = f.FlightDate 
+                                ORDER BY BestTaskPoints DESC 
+                         LIMIT 1) as best_pilot_id,
+                         (SELECT AVG(FlightDuration) FROM 
+                            (SELECT FlightDuration
+                                FROM dhv_flights f3
+                                WHERE f3.site_name = f.site_name 
+                                AND f3.FlightDate = f.FlightDate 
+                                ORDER BY FlightDuration DESC 
+                                LIMIT 3))/60.0 as avg_flight_duration  -- in minutes                  
                     FROM dhv_flights f
                     WHERE site_name = :site_name
                     GROUP BY site_name, FlightDate

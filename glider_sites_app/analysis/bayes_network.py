@@ -168,6 +168,16 @@ def discretize_data(df):
         # For forecast, this will be predicted
         data['XC_Result'] = 'A-Sled'  # Placeholder
 
+
+    if 'avg_flight_duration' in df.columns:
+        data['Avg_Flight_Duration'] = pd.cut(
+            df['avg_flight_duration'].fillna(0), # 0 if nobody flew
+            bins=[-np.inf, 9, 45, 90, np.inf], 
+            labels=['A-Abgleiter', 'B-Soaring', 'C-Good', 'D-Epic']
+        )
+    else:
+        data['Avg_Flight_Duration'] = 'Abgleiter'  # Placeholder
+
     return data.dropna() # BNs hate NaNs
 
 
@@ -213,10 +223,16 @@ def build_and_train_network(df_discrete):
         ('Social_Window',   'Is_Flyable'),
         ('RF_Flyability_Confidence', 'Is_Flyable'),
 
+
         # --- LAYER 3: Output ---
+        # How loing are the best flights?
+        ('Is_Flyable', 'Avg_Flight_Duration'),
+        ('Lift_Potential', 'Avg_Flight_Duration'),
+        ('Wind_State', 'Avg_Flight_Duration'),
+
         # How good is the flight? (Requires Flyability AND Lift)
         ('Is_Flyable',       'XC_Result'),
-        ('Lift_Potential',   'XC_Result'),
+        ('Avg_Flight_Duration',   'XC_Result'),
         ('Pilot_Skill_Present', 'XC_Result')
     ])
 
@@ -353,44 +369,43 @@ async def flight_predictor(site_name: str, save_model: bool = False):
 
     logger.info("\n=== SCENARIO 1: The 'Windy but Aligned' Day ===")
     logger.info("Wind: Strong, Alignment: Perfect, Lapse: Stable")
-    q1 = infer.query(
-        variables=['XC_Result'], 
-        evidence={
+    evidence={
             'Wind_State': 'Strong', 
             'Alignment_State': 'Perfect', 
             'Thermal_Quality': 'Stable',
             #'Wind_850_State': 'Strong',
             'Is_Flyable': 'Yes',
             'Pilot_Skill_Present': 'Intermediate'
-        }
-    )
+    }    
+    q1 = infer.query(variables=['XC_Result'], evidence=evidence)
     logger.info(q1)
+    q1 = infer.query(variables=['Avg_Flight_Duration'], evidence=evidence)
+    logger.info(q1)    
 
     logger.info("\n=== SCENARIO 2: The 'Perfect Thermal' Day ===")
-    logger.info("Wind: Perfect, Lapse: Great, Ceiling: High")
-    q2 = infer.query(
-        variables=['XC_Result'], 
-        evidence={
+    logger.info("Wind: Perfect, Lapse: Great, Ceiling: High, Pilot: Intermediate")
+    evidence={
             'Wind_State': 'Ideal', 
             'Thermal_Quality': 'Great', 
             'Ceiling_State': 'High',
             #'Wind_850_State': 'Light',
             'Is_Flyable': 'Yes' # We assume we launched
-            , 'Pilot_Skill_Present': 'Pro'
+            , 'Pilot_Skill_Present': 'Intermediate'
         }
-    )
+    q2 = infer.query(variables=['XC_Result'], evidence=evidence)
     logger.info(q2)
-
+    q2 = infer.query(variables=['Avg_Flight_Duration'], evidence=evidence)
+    logger.info(q2)
 
 if __name__ == '__main__':
     import asyncio
     
     # Train and save model
     save=False
-    asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
-    asyncio.run(flight_predictor('Königszinne', save_model=save))
-    asyncio.run(flight_predictor('Börry', save_model=save))
+    #asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
+    #asyncio.run(flight_predictor('Königszinne', save_model=save))
+    #asyncio.run(flight_predictor('Börry', save_model=save))
     asyncio.run(flight_predictor('Porta', save_model=save))
-    asyncio.run(flight_predictor('Brunsberg', save_model=save))
+    #asyncio.run(flight_predictor('Brunsberg', save_model=save))
 
     

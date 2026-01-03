@@ -15,6 +15,45 @@ from glider_sites_app.analysis.model_loader import save_bayesian_model, load_bay
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Define the DAG (Directed Acyclic Graph)
+# Syntax: (Parent, Child)
+NETWORK_GRAPH = [
+        # --- LAYER 1: Physics to Intermediate States ---
+        # Safety depends on Wind Speed and Turbulence
+        ('Wind_State',       'Launch_Safety'),
+        ('Turbulence_State', 'Launch_Safety'),
+        #('Wind_850_State',   'Shear_State'),   # 850 Wind drives Shear
+        
+        # Mechanics depends on Geometry (Alignment)
+        ('Alignment_State',  'Site_Mechanics'),
+        
+        # Lift depends on Lapse Rate and Ceiling
+        ('Thermal_Quality',  'Lift_Potential'),
+        ('Ceiling_State',    'Lift_Potential'),
+        #('Shear_State',      'Lift_Potential'), # High shear kills thermals
+
+        # --- LAYER 2: Intermediate to Decisions ---
+        # Can we fly? (Requires Safety AND Mechanics AND Pilots)
+        ('Launch_Safety',    'Is_Flyable'),
+        ('Site_Mechanics',   'Is_Flyable'),
+        ('Social_Window',   'Is_Flyable'),
+        ('RF_Flyability_Confidence', 'Is_Flyable'),
+
+
+        # --- LAYER 3: Output ---
+        # How loing are the best flights?
+        ('Is_Flyable', 'Avg_Flight_Duration'),
+        ('Lift_Potential', 'Avg_Flight_Duration'),
+        ('Wind_State', 'Avg_Flight_Duration'),
+
+        # How good is the flight? (Requires Flyability AND Lift)
+        ('Is_Flyable',       'XC_Result'),
+        ('Avg_Flight_Duration',   'XC_Result'),
+        ('Pilot_Skill_Present', 'XC_Result')
+    ]
+
+
+
 def discretize_data(df):
     """
     Converts raw weather numbers into Discrete Physics States.
@@ -198,43 +237,13 @@ def add_intermediate_states(df_discrete):
     return df_discrete
 
 
-def build_and_train_network(df_discrete):
-    # Define the DAG (Directed Acyclic Graph)
-    # Syntax: (Parent, Child)
-    model = BayesianNetwork([
-        # --- LAYER 1: Physics to Intermediate States ---
-        # Safety depends on Wind Speed and Turbulence
-        ('Wind_State',       'Launch_Safety'),
-        ('Turbulence_State', 'Launch_Safety'),
-        #('Wind_850_State',   'Shear_State'),   # 850 Wind drives Shear
-        
-        # Mechanics depends on Geometry (Alignment)
-        ('Alignment_State',  'Site_Mechanics'),
-        
-        # Lift depends on Lapse Rate and Ceiling
-        ('Thermal_Quality',  'Lift_Potential'),
-        ('Ceiling_State',    'Lift_Potential'),
-        #('Shear_State',      'Lift_Potential'), # High shear kills thermals
+def build_and_train_network(df_discrete, skip_fit:bool=False):
 
-        # --- LAYER 2: Intermediate to Decisions ---
-        # Can we fly? (Requires Safety AND Mechanics AND Pilots)
-        ('Launch_Safety',    'Is_Flyable'),
-        ('Site_Mechanics',   'Is_Flyable'),
-        ('Social_Window',   'Is_Flyable'),
-        ('RF_Flyability_Confidence', 'Is_Flyable'),
+    model = BayesianNetwork(NETWORK_GRAPH)
 
-
-        # --- LAYER 3: Output ---
-        # How loing are the best flights?
-        ('Is_Flyable', 'Avg_Flight_Duration'),
-        ('Lift_Potential', 'Avg_Flight_Duration'),
-        ('Wind_State', 'Avg_Flight_Duration'),
-
-        # How good is the flight? (Requires Flyability AND Lift)
-        ('Is_Flyable',       'XC_Result'),
-        ('Avg_Flight_Duration',   'XC_Result'),
-        ('Pilot_Skill_Present', 'XC_Result')
-    ])
+    if skip_fit:
+        # to get the global prior counts only
+        return model
 
     # Connect the learned data to the nodes
     # This automatically maps column names to nodes.
@@ -314,8 +323,7 @@ def predict_from_raw_weather(model, raw_weather_df):
     return pd.DataFrame(predictions)
 
 
-async def flight_predictor(site_name: str, save_model: bool = False):
-
+async def prepare_discretized_data(site_name: str):
     # Prepare data
     df = await prepare_training_data(site_name,use_workingdays=True)
     
@@ -334,15 +342,73 @@ async def flight_predictor(site_name: str, save_model: bool = False):
     # 2. Discretize
     df_bn = discretize_data(df)
 
-    logger.debug("\n=== Data Distribution ===")
-    for col in df_bn.columns:
-        logger.info(f"{col}: {df_bn[col].value_counts().to_dict()}")
-
-
     # 3. Create Intermediate "Truth" Columns
     # Since we are training, we need to tell the model what "Launch_Safety" actually WAS historically.
     # We create these synthetic ground-truth columns based on logic.
     df_bn = add_intermediate_states(df_bn)
+
+    return df_bn
+
+
+async def get_global_prior_counts(recalculate: bool = False):
+    """
+    Get global prior counts for all sites.
+    
+    Args:
+        recalculate: If True, recalculate from data and save to file. 
+                     If False (default), load from file if it exists.
+    
+    Returns:
+        Dictionary of prior counts for each node
+    """
+    import json
+    from pathlib import Path
+    
+    cache_file = Path('global_prior_counts.json')
+    
+    # Try to load from cache if not recalculating
+    if not recalculate and cache_file.exists():
+        logger.info(f"Loading global prior counts from {cache_file}")
+        with open(cache_file, 'r') as f:
+            global_prior_counts = json.load(f)
+        logger.info("Global prior counts loaded from cache.")
+        return global_prior_counts
+    
+    # Calculate from data
+    logger.info("Calculating global prior counts from data...")
+    dfs = [ await prepare_discretized_data(site_name) 
+            for site_name in ['Rammelsberg NW', 'Königszinne', 'Börry', 'Porta', 'Brunsberg']]
+    global_df = pd.concat(dfs, ignore_index=True)
+
+    logger.info(f"\n=== Global Prior Counts  ===")
+    for col in global_df.columns:
+        logger.debug(f"{col}: {global_df[col].value_counts().to_dict()}")
+
+    # if this is reworked then global_df does not need to be passed here?!
+    model = build_and_train_network(global_df, skip_fit=True)
+
+    global_prior_counts = {node: global_df[node].value_counts().to_dict() if node != 'Alignment_State' else {'Cross':100, 'Okay':100, 'Perfect':100}
+                             for node in model.nodes()}
+    logger.info(f"Global prior counts computed.")
+    logger.info(global_prior_counts)
+    
+    # Save to cache
+    cache_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(cache_file, 'w') as f:
+        json.dump(global_prior_counts, f, indent=2)
+    logger.info(f"Global prior counts saved to {cache_file}")
+
+    return global_prior_counts
+
+
+async def flight_predictor(site_name: str, save_model: bool = False):
+
+    df_bn = await prepare_discretized_data(site_name)
+
+    logger.debug("\n=== Data Distribution ===")
+    for col in df_bn.columns:
+        logger.info(f"{col}: {df_bn[col].value_counts().to_dict()}")
+
 
     # 4. Train
     model = build_and_train_network(df_bn)
@@ -354,7 +420,8 @@ async def flight_predictor(site_name: str, save_model: bool = False):
         features = [
             'avg_wind_speed', 'max_wind_gust', 'avg_wind_alignment',
             'max_lapse_rate', 'max_boundary_layer_height', 'wind_speed_850hPa',
-            'is_workingday', 'best_score'
+             'rf_confidence','rf_prediction'
+            'is_workingday', 'best_score','avg_flight_duration'
         ]
         save_bayesian_model(model, site_name, features)
 
@@ -400,12 +467,15 @@ async def flight_predictor(site_name: str, save_model: bool = False):
 if __name__ == '__main__':
     import asyncio
     
+    # Set up global counts
+    asyncio.run(get_global_prior_counts(recalculate=False))
+
     # Train and save model
     save=False
     #asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
     #asyncio.run(flight_predictor('Königszinne', save_model=save))
     #asyncio.run(flight_predictor('Börry', save_model=save))
-    asyncio.run(flight_predictor('Porta', save_model=save))
+    #asyncio.run(flight_predictor('Porta', save_model=save))
     #asyncio.run(flight_predictor('Brunsberg', save_model=save))
 
     

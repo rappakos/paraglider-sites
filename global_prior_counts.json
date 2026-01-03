@@ -1,0 +1,73 @@
+{
+  "Wind_State": {
+    "Ideal": 2913,
+    "Strong": 2598,
+    "Very Strong": 949,
+    "Calm": 518,
+    "Extreme": 258
+  },
+  "Launch_Safety": {
+    "Unsafe": 3690,
+    "Safe": 3546
+  },
+  "Turbulence_State": {
+    "Dangerous": 3675,
+    "OK": 1397,
+    "Gusty": 1392,
+    "Smooth": 772
+  },
+  "Alignment_State": {
+    "Cross": 100,
+    "Okay": 100,
+    "Perfect": 100
+  },
+  "Site_Mechanics": {
+    "Off": 4616,
+    "On": 2620
+  },
+  "Thermal_Quality": {
+    "Great": 5523,
+    "OK": 719,
+    "Stable": 602,
+    "Weak": 392
+  },
+  "Lift_Potential": {
+    "Good": 6242,
+    "Bad": 994
+  },
+  "Ceiling_State": {
+    "Low": 2705,
+    "Average": 2690,
+    "High": 1841
+  },
+  "Is_Flyable": {
+    "No": 6399,
+    "Yes": 837
+  },
+  "Social_Window": {
+    "Low": 5165,
+    "High": 2071
+  },
+  "RF_Flyability_Confidence": {
+    "Low": 5513,
+    "Medium": 883,
+    "High": 840
+  },
+  "Avg_Flight_Duration": {
+    "A-Abgleiter": 6521,
+    "D-Epic": 323,
+    "B-Soaring": 213,
+    "C-Good": 179
+  },
+  "XC_Result": {
+    "A-Sled": 6597,
+    "B-Local": 274,
+    "C-XC": 242,
+    "D-Hammer": 123
+  },
+  "Pilot_Skill_Present": {
+    "Basic": 6454,
+    "Pro": 418,
+    "Intermediate": 364
+  }
+}

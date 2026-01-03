@@ -58,6 +58,7 @@ STATE_NAMES = {
     'Alignment_State':   ['Cross', 'Okay', 'Perfect'],
     'Thermal_Quality':   ['Stable', 'Weak', 'OK', 'Great'],
     'Ceiling_State':     ['Low', 'Average', 'High'],
+    'Wind_850_State':   ['Light', 'Drift', 'Strong'],
     'Launch_Safety':    ['Safe', 'Unsafe'],
     'Site_Mechanics':   ['On', 'Off'],
     'Lift_Potential':   ['Good', 'Bad'],
@@ -108,7 +109,7 @@ def discretize_data(df):
         df['avg_wind_speed'], 
         bins=[-np.inf, 5.4, 12.6, 19.8, 27, np.inf], 
         #labels=['Calm', 'Perfect', 'Strong', 'Nuke']
-        labels=['Calm', 'Ideal', 'Strong', 'Very Strong', 'Extreme']
+        labels=STATE_NAMES['Wind_State']
     )
 
     # --- 2. GUST FACTOR (The Turbulence) ---    
@@ -118,7 +119,7 @@ def discretize_data(df):
     data['Turbulence_State'] = pd.cut(
         gust_fac, 
         bins=[-np.inf, 1.,2., 3., np.inf], 
-        labels=['Smooth','OK', 'Gusty', 'Dangerous']
+        labels=STATE_NAMES['Turbulence_State']
     )
     
     # --- 3. ALIGNMENT (The Geometry) ---
@@ -128,7 +129,7 @@ def discretize_data(df):
     data['Alignment_State'] = pd.cut(
         df['avg_wind_alignment'], 
         bins=[-np.inf,0.5 , 0.8, np.inf], 
-        labels=['Cross', 'Okay', 'Perfect']
+        labels=STATE_NAMES['Alignment_State']
     )
 
     # --- 4. ENGINE (Lapse Rate / Lift) ---
@@ -148,7 +149,7 @@ def discretize_data(df):
     data['Thermal_Quality'] = pd.cut(
         df[lr_col],
         bins=[-np.inf, 3.57,5.36, 7.14, np.inf],
-        labels=['Stable', 'Weak', 'OK', 'Great']
+        labels=STATE_NAMES['Thermal_Quality']
     )
 
     # --- 5. CEILING (BLH) ---
@@ -158,7 +159,7 @@ def discretize_data(df):
     data['Ceiling_State'] = pd.cut(
         df['max_boundary_layer_height'],
         bins=[-np.inf, 800, 1500, np.inf],
-        labels=['Low', 'Average', 'High']
+        labels=STATE_NAMES['Ceiling_State']
     )
 
     # Create the 'Shear' variable (Absolute difference in speed)
@@ -174,7 +175,7 @@ def discretize_data(df):
     data['Wind_850_State'] = pd.cut(
         df['wind_speed_850hPa'],
         bins=[-np.inf, 15, 30, np.inf],
-        labels=['Light', 'Drift', 'Strong']
+        labels=STATE_NAMES['Wind_850_State']
     )
 
     # Handle optional columns for forecast vs training data
@@ -188,7 +189,7 @@ def discretize_data(df):
         data['Pilot_Skill_Present'] = pd.cut(
             df['best_score'],
             bins=[-np.inf, 17, 87, np.inf],
-            labels=['Basic', 'Intermediate', 'Pro']
+            labels=STATE_NAMES['Pilot_Skill_Present']
         )
     else:
         # For forecast data, assume intermediate skill level
@@ -200,7 +201,7 @@ def discretize_data(df):
         data['RF_Flyability_Confidence'] = pd.cut(
             df.apply(lambda row: row['rf_confidence'] if row['rf_prediction'] else 1.0 - row['rf_confidence'], axis=1),
             bins=[-np.inf, 0.33, 0.67, np.inf],
-            labels=['Low', 'Medium', 'High']
+            labels=STATE_NAMES['RF_Flyability_Confidence']
         )
 
     # --- TARGETS (What we want to predict) ---
@@ -217,7 +218,7 @@ def discretize_data(df):
         data['XC_Result'] = pd.cut(
             df['max_daily_score'].fillna(0), # 0 if nobody flew
             bins=[-np.inf, 5, 15, 50, np.inf], 
-            labels=['A-Sled', 'B-Local', 'C-XC', 'D-Hammer']
+            labels=STATE_NAMES['XC_Result']
         )
     else:
         # For forecast, this will be predicted
@@ -228,10 +229,10 @@ def discretize_data(df):
         data['Avg_Flight_Duration'] = pd.cut(
             df['avg_flight_duration'].fillna(0), # 0 if nobody flew
             bins=[-np.inf, 9, 45, 90, np.inf], 
-            labels=['A-Abgleiter', 'B-Soaring', 'C-Good', 'D-Epic']
+            labels=STATE_NAMES['Avg_Flight_Duration']
         )
     else:
-        data['Avg_Flight_Duration'] = 'Abgleiter'  # Placeholder
+        data['Avg_Flight_Duration'] = 'A-Abgleiter'  # Placeholder
 
     return data.dropna() # BNs hate NaNs
 
@@ -270,6 +271,9 @@ def get_formatted_pseudo_counts(model, global_counts, site_df):
 async def build_and_train_network(df_discrete, skip_fit:bool=False):
 
     model = BayesianNetwork(NETWORK_GRAPH)
+
+    model.add_nodes_from(STATE_NAMES.keys())
+    model.state_names = { node: states for node, states in STATE_NAMES.items() }
 
     if skip_fit:
         # to get the global prior counts only

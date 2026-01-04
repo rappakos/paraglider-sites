@@ -10,7 +10,7 @@ from pgmpy.estimators import MaximumLikelihoodEstimator,BayesianEstimator
 from pgmpy.inference import VariableElimination
 
 from glider_sites_app.analysis.data_preparation import prepare_training_data
-from glider_sites_app.analysis.model_loader import save_bayesian_model, load_bayesian_model, load_site_model
+from glider_sites_app.analysis.model_loader import save_bayesian_model, load_bayesian_model, load_site_model, save_site_prior_counts, load_site_prior_counts
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -498,7 +498,9 @@ async def get_global_prior_counts(recalculate: bool = False):
     return global_prior_counts
 
 
-async def flight_predictor(site_name: str, save_model: bool = False, maximum_likelihood: bool = False):
+async def flight_predictor(site_name: str, 
+                           save_model: bool = False, 
+                           maximum_likelihood: bool = False):
 
     df_bn = await prepare_discretized_data(site_name)
 
@@ -506,9 +508,11 @@ async def flight_predictor(site_name: str, save_model: bool = False, maximum_lik
     for col in df_bn.columns:
         logger.info(f"{col}: {df_bn[col].value_counts().to_dict()}")
 
-
     # 4. Train
     model = await build_and_train_network(df_bn, maximum_likelihood=maximum_likelihood)
+    
+    # Save site-specific prior counts
+    save_site_prior_counts(site_name, {node: df_bn[node].value_counts().to_dict() for node in model.nodes()})
 
     logging.debug((model.get_cpds('XC_Result')))
     
@@ -570,7 +574,7 @@ if __name__ == '__main__':
     #asyncio.run(get_global_prior_counts(recalculate=True))
 
     # Train and save model
-    save=False
+    save=True
     asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
     asyncio.run(flight_predictor('Königszinne', save_model=save))
     asyncio.run(flight_predictor('Börry', save_model=save))

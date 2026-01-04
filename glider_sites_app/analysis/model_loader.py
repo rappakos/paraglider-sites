@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import joblib
 import pathlib
 import logging
@@ -5,7 +6,7 @@ from typing import Literal
 
 logger = logging.getLogger(__name__)
 
-ModelType = Literal['classifier', 'regressor', 'bayesian']
+ModelType = Literal['classifier', 'regressor', 'bayesian', 'prior_counts']
 
 def get_model_path(site_name: str, type: ModelType) -> pathlib.Path:
     """Get the file path for the pre-trained model of the given site"""
@@ -16,6 +17,8 @@ def get_model_path(site_name: str, type: ModelType) -> pathlib.Path:
         suffix = f"{type}_rf_model.joblib"
     elif type == 'bayesian':
         suffix = "bayesian_model.joblib"
+    elif type == 'prior_counts':
+        suffix = "prior_counts.joblib"
     else:
         raise ValueError(f"Invalid model type: {type}. Must be 'classifier', 'regressor', or 'bayesian'")
     
@@ -72,6 +75,31 @@ def save_bayesian_model(model, site_name: str, features: list = None):
     
     return save_results(site_name, 'bayesian', model_data)
 
+
+def save_site_prior_counts(site_name: str, prior_counts: dict):
+    """Save prior counts for a site
+    
+    Args:
+        site_name: Name of the site
+        prior_counts: Dictionary of prior counts
+    """
+    counts_data = {
+        'version': datetime.now(timezone.utc).isoformat(),
+        'prior_counts': prior_counts
+    }
+    return save_results(site_name, 'prior_counts', counts_data)
+
+def load_site_prior_counts(site_name: str):
+    """Load prior counts for a site
+    
+    Args:
+        site_name: Name of the site
+    Returns:
+
+        Dictionary of prior counts, or None if not found
+    """
+    res = load_site_model(site_name, 'prior_counts')
+    return res['prior_counts'] if res is not None else None
 
 def load_bayesian_model(site_name: str):
     """Load a trained Bayesian Network model

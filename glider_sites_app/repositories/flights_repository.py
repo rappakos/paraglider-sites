@@ -28,6 +28,7 @@ async def load_flight_counts(site_name: str) -> DataFrame:
                                 WHERE f3.site_name = f.site_name 
                                 AND f3.FlightDate = f.FlightDate 
                                 ORDER BY FlightDuration DESC 
+                                -- TODO decide whether we want to aggregate by pilot
                                 LIMIT 3))/60.0 as avg_flight_duration  -- in minutes                  
                     FROM dhv_flights f
                     WHERE site_name = :site_name

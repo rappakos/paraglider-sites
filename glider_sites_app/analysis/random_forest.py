@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 async def train_flight_predictor(site_name: str, 
                                  type: Literal['classifier', 'regressor'], 
-                                 test_size: float = 0.2,
                                  save: bool = False
     ):
     """Train Random Forest to predict daily flight count"""

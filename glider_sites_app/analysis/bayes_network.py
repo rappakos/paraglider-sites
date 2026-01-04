@@ -484,7 +484,7 @@ async def get_global_prior_counts(recalculate: bool = False):
     # if this is reworked then global_df does not need to be passed here?!
     model = await build_and_train_network(global_df, skip_fit=True)
 
-    global_prior_counts = {node: global_df[node].value_counts().to_dict() if node != 'Alignment_State' else {'Cross':100, 'Okay':100, 'Perfect':100}
+    global_prior_counts = {node: global_df[node].value_counts().to_dict() # if node != 'Alignment_State' else {'Cross':100, 'Okay':100, 'Perfect':100}
                              for node in model.nodes()}
     logger.info(f"Global prior counts computed.")
     logger.info(global_prior_counts)

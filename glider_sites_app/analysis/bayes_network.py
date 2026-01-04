@@ -258,22 +258,71 @@ def get_formatted_pseudo_counts(model, global_counts, site_df):
     """
     Transforms flat global counts into the (node_card, product_of_parents_card) 
     shape required by pgmpy.
+    
+    For each node, creates an array of shape [num_states(node), ∏ num_states(parents)]
+    where the prior counts are distributed based on global frequencies.
     """
     formatted_pseudo_counts = {}
+
+    equivalent_sample_size = 100 # TODO: Adjust ESS as needed
     
     for node in model.nodes():
-        # TODO Handle nodes with parents
-        print(node)
+        # Get the states for this node (in semantic order from STATE_NAMES)
+        node_states = STATE_NAMES[node]
+        node_card = len(node_states)
+        
+        # Get parent information
+        parents = list(model.get_parents(node))
+        
+        if not parents:
+            # No parents: shape is (node_card, 1)
+            # Fill with global counts for each state
+            counts_array = np.ones((node_card, 1))
+            for i, state in enumerate(node_states):
+                # Use global count if available, otherwise use 1
+                counts_array[i, 0] = global_counts.get(node, {}).get(state, 1)
+            formatted_pseudo_counts[node] = counts_array
+        else:
+            # Has parents: shape is (node_card, product of parent cardinalities)
+            parent_cards = [len(STATE_NAMES[p]) for p in parents]
+            parent_card_prod = np.prod(parent_cards)
             
+            # Initialize with global prior for this node
+            counts_array = np.ones((node_card, parent_card_prod))
+            
+            # Distribute global counts across all parent combinations
+            for i, state in enumerate(node_states):
+                # 1. Get the raw global count
+                global_count = global_counts.get(node, {}).get(state, 1)
+                
+                # 2. Convert to a PROBABILITY (Frequency)
+                # Total global observations for this node
+                total_node_obs = sum(global_counts.get(node, {}).values())
+                global_prob = global_count / total_node_obs if total_node_obs > 0 else 1/node_card
+                
+                # 3. Scale by ESS (e.g., 150) and distribute
+                # This ensures the TOTAL prior weight for this node is exactly 150
+                counts_array[i, :] = (global_prob * equivalent_sample_size) / parent_card_prod
+            
+            formatted_pseudo_counts[node] = counts_array
+        
+        logger.debug(f"{node}: shape {counts_array.shape}, parents={parents}")
+    
     return formatted_pseudo_counts
 
 
-async def build_and_train_network(df_discrete, skip_fit:bool=False):
+async def build_and_train_network(df_discrete, skip_fit:bool=False, maximum_likelihood:bool=False):
 
     model = BayesianNetwork(NETWORK_GRAPH)
 
-    model.add_nodes_from(STATE_NAMES.keys())
-    model.state_names = { node: states for node, states in STATE_NAMES.items() }
+    # Only add nodes that appear in the network graph (connected nodes)
+    nodes_in_graph = set()
+    for parent, child in NETWORK_GRAPH:
+        nodes_in_graph.add(parent)
+        nodes_in_graph.add(child)
+    
+    model.add_nodes_from(nodes_in_graph)
+    model.state_names = { node: states for node, states in STATE_NAMES.items() if node in nodes_in_graph }
 
     if skip_fit:
         # to get the global prior counts only
@@ -285,15 +334,16 @@ async def build_and_train_network(df_discrete, skip_fit:bool=False):
 
     formatted_pseudo_counts = get_formatted_pseudo_counts(model, global_prior_counts, df_discrete)
 
-    estimator = MaximumLikelihoodEstimator(model, df_discrete)
-    cpds = estimator.get_parameters()
-
-    #estimator = BayesianEstimator(model, df_discrete)
-    #cpds = estimator.get_parameters(
-    #    prior_type='dirichlet', 
-    #    pseudo_counts=formatted_pseudo_counts, 
-    #    equivalent_sample_size=10 
-    #)    
+    if maximum_likelihood:
+        estimator = MaximumLikelihoodEstimator(model, df_discrete)
+        cpds = estimator.get_parameters()
+    else:
+        estimator = BayesianEstimator(model, df_discrete)
+        cpds = estimator.get_parameters(
+            prior_type='dirichlet', 
+            pseudo_counts=formatted_pseudo_counts, 
+            equivalent_sample_size=100
+        )
     
     model.add_cpds(*cpds)    
 
@@ -447,7 +497,7 @@ async def get_global_prior_counts(recalculate: bool = False):
     return global_prior_counts
 
 
-async def flight_predictor(site_name: str, save_model: bool = False):
+async def flight_predictor(site_name: str, save_model: bool = False, maximum_likelihood: bool = False):
 
     df_bn = await prepare_discretized_data(site_name)
 
@@ -457,7 +507,7 @@ async def flight_predictor(site_name: str, save_model: bool = False):
 
 
     # 4. Train
-    model = await build_and_train_network(df_bn)
+    model = await build_and_train_network(df_bn, maximum_likelihood=maximum_likelihood)
 
     logging.debug((model.get_cpds('XC_Result')))
     
@@ -495,15 +545,17 @@ async def flight_predictor(site_name: str, save_model: bool = False):
     q1 = infer.query(variables=['Avg_Flight_Duration'], evidence=evidence)
     logger.info(q1)    
 
+
+    pilot_skill = 'Intermediate'
     logger.info("\n=== SCENARIO 2: The 'Perfect Thermal' Day ===")
-    logger.info("Wind: Perfect, Lapse: Great, Ceiling: High, Pilot: Intermediate")
+    logger.info(f"Wind: Perfect, Lapse: Great, Ceiling: High, Pilot: {pilot_skill}")
     evidence={
             'Wind_State': 'Ideal', 
             'Thermal_Quality': 'Great', 
             'Ceiling_State': 'High',
             #'Wind_850_State': 'Light',
             'Is_Flyable': 'Yes' # We assume we launched
-            , 'Pilot_Skill_Present': 'Intermediate'
+            , 'Pilot_Skill_Present': pilot_skill
         }
     q2 = infer.query(variables=['XC_Result'], evidence=evidence)
     logger.info(q2)
@@ -518,10 +570,10 @@ if __name__ == '__main__':
 
     # Train and save model
     save=False
-    asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
+    #asyncio.run(flight_predictor('Rammelsberg NW', save_model=save, maximum_likelihood=False))
     #asyncio.run(flight_predictor('Königszinne', save_model=save))
     #asyncio.run(flight_predictor('Börry', save_model=save))
-    #asyncio.run(flight_predictor('Porta', save_model=save))
-    #asyncio.run(flight_predictor('Brunsberg', save_model=save))
+    asyncio.run(flight_predictor('Porta', save_model=save))
+    asyncio.run(flight_predictor('Brunsberg', save_model=save))
 
     

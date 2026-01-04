@@ -70,6 +70,7 @@ STATE_NAMES = {
     'Avg_Flight_Duration': ['A-Abgleiter', 'B-Soaring', 'C-Good', 'D-Epic']
 }
 
+ESS = 100  # Equivalent Sample Size for Bayesian Estimation
 
 def discretize_data(df):
     """
@@ -254,7 +255,7 @@ def add_intermediate_states(df_discrete):
     return df_discrete
 
 
-def get_formatted_pseudo_counts(model, global_counts, site_df):
+def get_formatted_pseudo_counts(model, global_counts):
     """
     Transforms flat global counts into the (node_card, product_of_parents_card) 
     shape required by pgmpy.
@@ -264,7 +265,7 @@ def get_formatted_pseudo_counts(model, global_counts, site_df):
     """
     formatted_pseudo_counts = {}
 
-    equivalent_sample_size = 100 # TODO: Adjust ESS as needed
+    equivalent_sample_size = ESS  # Use the global ESS constant
     
     for node in model.nodes():
         # Get the states for this node (in semantic order from STATE_NAMES)
@@ -332,7 +333,7 @@ async def build_and_train_network(df_discrete, skip_fit:bool=False, maximum_like
 
     global_prior_counts = await get_global_prior_counts(recalculate=False)
 
-    formatted_pseudo_counts = get_formatted_pseudo_counts(model, global_prior_counts, df_discrete)
+    formatted_pseudo_counts = get_formatted_pseudo_counts(model, global_prior_counts)
 
     if maximum_likelihood:
         estimator = MaximumLikelihoodEstimator(model, df_discrete)
@@ -342,7 +343,7 @@ async def build_and_train_network(df_discrete, skip_fit:bool=False, maximum_like
         cpds = estimator.get_parameters(
             prior_type='dirichlet', 
             pseudo_counts=formatted_pseudo_counts, 
-            equivalent_sample_size=100
+            equivalent_sample_size=ESS
         )
     
     model.add_cpds(*cpds)    
@@ -569,10 +570,10 @@ if __name__ == '__main__':
     #asyncio.run(get_global_prior_counts(recalculate=True))
 
     # Train and save model
-    save=False
-    #asyncio.run(flight_predictor('Rammelsberg NW', save_model=save, maximum_likelihood=False))
-    #asyncio.run(flight_predictor('Königszinne', save_model=save))
-    #asyncio.run(flight_predictor('Börry', save_model=save))
+    save=True
+    asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
+    asyncio.run(flight_predictor('Königszinne', save_model=save))
+    asyncio.run(flight_predictor('Börry', save_model=save))
     asyncio.run(flight_predictor('Porta', save_model=save))
     asyncio.run(flight_predictor('Brunsberg', save_model=save))
 

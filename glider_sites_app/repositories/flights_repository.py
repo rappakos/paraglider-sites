@@ -4,7 +4,7 @@ import aiosqlite
 from pandas import read_sql_query, DataFrame
 from sqlalchemy import create_engine, text
 
-async def load_flight_counts(site_name: str) -> DataFrame:
+async def load_flight_counts(site_name: str, FKPilotID: str = None) -> DataFrame:
     """Load daily flight counts for a site"""
     engine = create_engine(f'sqlite:///{DB_NAME}')
     try:
@@ -32,10 +32,11 @@ async def load_flight_counts(site_name: str) -> DataFrame:
                                 LIMIT 3))/60.0 as avg_flight_duration  -- in minutes                  
                     FROM dhv_flights f
                     WHERE site_name = :site_name
+                        AND (:FKPilotID IS NULL OR FKPilot = :FKPilotID)
                     GROUP BY site_name, FlightDate
                 """),
                 db,
-                params={'site_name': site_name}
+                params={'site_name': site_name, 'FKPilotID': FKPilotID}
             )
         return df
     finally:

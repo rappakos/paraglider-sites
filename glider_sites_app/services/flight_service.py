@@ -36,8 +36,8 @@ async def pilot_statistics():
 
     return res
 
-async def load_flight_data(site_name: str):
-    res = await load_flight_counts(site_name)
+async def load_flight_data(site_name: str, FKPilotID: str = None):
+    res = await load_flight_counts(site_name, FKPilotID=FKPilotID)
     resX = await get_xcontest_flight_counts(site_name)
     if not resX.empty:
         res = pd.concat([res, resX], ignore_index=True)

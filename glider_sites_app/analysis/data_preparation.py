@@ -10,11 +10,11 @@ from glider_sites_app.services.flight_service import load_flight_data
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-async def prepare_training_data(site_name: str, use_workingdays: bool = False) -> pd.DataFrame:
+async def prepare_training_data(site_name: str, use_workingdays: bool = False, FKPilotID: str = None) -> pd.DataFrame:
     """Merge flight and weather data"""
     logger.info(f"Loading data for {site_name}")
 
-    flights_df = await load_flight_data(site_name)
+    flights_df = await load_flight_data(site_name, FKPilotID=FKPilotID)
     weather_df = await load_agg_weather_data(site_name)  
     
     logger.debug(f"Weather data: {len(weather_df)} days")

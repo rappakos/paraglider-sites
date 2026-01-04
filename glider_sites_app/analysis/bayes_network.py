@@ -81,7 +81,6 @@ def discretize_data(df):
 
     filter = df['date'].astype(str) >= '2022-01-01' # wind @ 850hPa and other data not available before
     df = df[filter]
-
     
     # ChatGPT Suggested Discretization Bins:
     # | Node                | Bins        |
@@ -312,7 +311,7 @@ def get_formatted_pseudo_counts(model, global_counts):
     return formatted_pseudo_counts
 
 
-async def build_and_train_network(df_discrete, skip_fit:bool=False, maximum_likelihood:bool=False):
+async def build_and_train_network(df_discrete, skip_fit:bool=False, maximum_likelihood:bool=False, personalized:bool=False, site_name: str = None):
 
     model = BayesianNetwork(NETWORK_GRAPH)
 
@@ -331,19 +330,23 @@ async def build_and_train_network(df_discrete, skip_fit:bool=False, maximum_like
     
     logger.info("Training Bayesian Network...")
 
-    global_prior_counts = await get_global_prior_counts(recalculate=False)
+    if personalized:
+        # Try to load prior counts for this site
+        prior_counts = load_site_prior_counts(site_name)
+    else:
+        prior_counts = await get_global_prior_counts(recalculate=False)
 
-    formatted_pseudo_counts = get_formatted_pseudo_counts(model, global_prior_counts)
+    formatted_pseudo_counts = get_formatted_pseudo_counts(model, prior_counts)
 
     if maximum_likelihood:
         estimator = MaximumLikelihoodEstimator(model, df_discrete)
         cpds = estimator.get_parameters()
     else:
-        estimator = BayesianEstimator(model, df_discrete)
+        estimator = BayesianEstimator(model, df_discrete, state_names=model.state_names)
         cpds = estimator.get_parameters(
             prior_type='dirichlet', 
             pseudo_counts=formatted_pseudo_counts, 
-            equivalent_sample_size=ESS
+            equivalent_sample_size=100  if personalized else ESS
         )
     
     model.add_cpds(*cpds)    
@@ -419,10 +422,21 @@ def predict_from_raw_weather(model, raw_weather_df):
     
     return pd.DataFrame(predictions)
 
+def lock_categories(df):
+    """
+    Forces the dataframe to include all possible states, 
+    even if they have 0 occurrences.
+    """
+    for node, states in STATE_NAMES.items():
+        if node in df.columns:
+            # Convert to Categorical and explicitly pass ALL possible states
+            df[node] = pd.Categorical(df[node], categories=states, ordered=True)
+    return df
 
-async def prepare_discretized_data(site_name: str):
+
+async def prepare_discretized_data(site_name: str, FKPilotID: str = None):
     # Prepare data
-    df = await prepare_training_data(site_name,use_workingdays=True)
+    df = await prepare_training_data(site_name,use_workingdays=True, FKPilotID=FKPilotID)
     
     # Include rf model predictions if available
     rf_model = await asyncio.to_thread(load_site_model, site_name, type='classifier')
@@ -443,6 +457,9 @@ async def prepare_discretized_data(site_name: str):
     # Since we are training, we need to tell the model what "Launch_Safety" actually WAS historically.
     # We create these synthetic ground-truth columns based on logic.
     df_bn = add_intermediate_states(df_bn)
+
+    # 4. Lock categories to ensure all possible states exist
+    df_bn = lock_categories(df_bn)
 
     return df_bn
 
@@ -567,6 +584,30 @@ async def flight_predictor(site_name: str,
     q2 = infer.query(variables=['Avg_Flight_Duration'], evidence=evidence)
     logger.info(q2)
 
+
+async def personal_predictor(FKPilotID: str):
+    results = {}
+    for site_name in ['Rammelsberg NW', 'Königszinne', 'Börry', 'Porta', 'Brunsberg']:
+
+        df_bn = await prepare_discretized_data(site_name, FKPilotID)
+        model = await build_and_train_network(df_bn, maximum_likelihood=False, personalized=True, site_name=site_name)
+
+
+        infer = VariableElimination(model)
+        evidence={
+            'Wind_State': 'Ideal', 
+            'Thermal_Quality': 'Great', 
+            'Ceiling_State': 'High',
+            #'Wind_850_State': 'Light',
+            'Is_Flyable': 'Yes' # We assume we launched
+            , 'Pilot_Skill_Present':  'Intermediate'
+        }
+        q2 = infer.query(variables=['Avg_Flight_Duration'], evidence=evidence)
+        probs = {state: prob for state, prob in zip(STATE_NAMES['Avg_Flight_Duration'], q2.values)}
+        results[site_name] = probs
+
+    logger.info(pd.DataFrame(results))
+
 if __name__ == '__main__':
     import asyncio
     
@@ -575,10 +616,11 @@ if __name__ == '__main__':
 
     # Train and save model
     save=True
-    asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
-    asyncio.run(flight_predictor('Königszinne', save_model=save))
-    asyncio.run(flight_predictor('Börry', save_model=save))
-    asyncio.run(flight_predictor('Porta', save_model=save))
-    asyncio.run(flight_predictor('Brunsberg', save_model=save))
+    #asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
+    #asyncio.run(flight_predictor('Königszinne', save_model=save))
+    #asyncio.run(flight_predictor('Börry', save_model=save))
+    #asyncio.run(flight_predictor('Porta', save_model=save))
+    #asyncio.run(flight_predictor('Brunsberg', save_model=save))
 
     
+    asyncio.run(personal_predictor(FKPilotID=12957))

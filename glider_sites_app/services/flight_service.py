@@ -149,4 +149,13 @@ if __name__ == "__main__":
     #asyncio.run(sync_dhv_flights('Brunsberg'))
     #asyncio.run(sync_xcontest_flights('Rammelsberg NW'))
     #asyncio.run(sync_xcontest_flights('Brunsberg'))
-    asyncio.run(xcontest_flight_count('Brunsberg'))
+    #asyncio.run(xcontest_flight_count('Brunsberg'))
+
+    site_name = 'Rammelsberg NW'
+    df = asyncio.run(load_flight_data(site_name))
+    percentiles = df['avg_flight_duration'].quantile([0.25, 0.5, 0.75, 0.9])
+    logger.info(f"\nFlight Duration Percentiles for {site_name}:")
+    logger.info(f"25th percentile: {percentiles[0.25]:.2f}")
+    logger.info(f"50th percentile (median): {percentiles[0.5]:.2f}")
+    logger.info(f"75th percentile: {percentiles[0.75]:.2f}")
+    logger.info(f"90th percentile: {percentiles[0.9]:.2f}")

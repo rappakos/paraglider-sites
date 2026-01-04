@@ -70,7 +70,7 @@ STATE_NAMES = {
     'Avg_Flight_Duration': ['A-Abgleiter', 'B-Soaring', 'C-Good', 'D-Epic']
 }
 
-ESS = 100  # Equivalent Sample Size for Bayesian Estimation
+ESS = 50  # Equivalent Sample Size for Bayesian Estimation
 
 def discretize_data(df):
     """
@@ -229,7 +229,7 @@ def discretize_data(df):
     if 'avg_flight_duration' in df.columns:
         data['Avg_Flight_Duration'] = pd.cut(
             df['avg_flight_duration'].fillna(0), # 0 if nobody flew
-            bins=[-np.inf, 9, 45, 90, np.inf], 
+            bins=[-np.inf, 9, 45, 120, np.inf], 
             labels=STATE_NAMES['Avg_Flight_Duration']
         )
     else:
@@ -570,7 +570,7 @@ if __name__ == '__main__':
     #asyncio.run(get_global_prior_counts(recalculate=True))
 
     # Train and save model
-    save=True
+    save=False
     asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
     asyncio.run(flight_predictor('Königszinne', save_model=save))
     asyncio.run(flight_predictor('Börry', save_model=save))

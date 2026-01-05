@@ -590,6 +590,7 @@ async def personal_predictor(FKPilotID: str):
     for site_name in ['Rammelsberg NW', 'Königszinne', 'Börry', 'Porta', 'Brunsberg']:
 
         df_bn = await prepare_discretized_data(site_name, FKPilotID)
+        logger.info(f"Training personalized model for site {site_name} with {len(df_bn[df_bn['Is_Flyable'].isin(['Yes'])])} days of data.")
         model = await build_and_train_network(df_bn, maximum_likelihood=False, personalized=True, site_name=site_name)
 
 
@@ -615,12 +616,16 @@ if __name__ == '__main__':
     #asyncio.run(get_global_prior_counts(recalculate=True))
 
     # Train and save model
-    save=True
+    save=False
     #asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
     #asyncio.run(flight_predictor('Königszinne', save_model=save))
     #asyncio.run(flight_predictor('Börry', save_model=save))
     #asyncio.run(flight_predictor('Porta', save_model=save))
     #asyncio.run(flight_predictor('Brunsberg', save_model=save))
 
+    p = {
+        'A': 12957,
+        'O': 12953
+    }
     
-    asyncio.run(personal_predictor(FKPilotID=12957))
+    asyncio.run(personal_predictor(FKPilotID=p['A']))

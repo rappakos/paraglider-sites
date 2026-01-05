@@ -400,7 +400,8 @@ def predict_from_raw_weather(model, raw_weather_df):
                 'Thermal_Quality': row['Thermal_Quality'],
                 'Ceiling_State': row['Ceiling_State'],
                 'Social_Window': row['Social_Window'], # High for forecasts
-                'Pilot_Skill_Present': row['Pilot_Skill_Present'] # Intermediate for forecasts
+                'Pilot_Skill_Present': row['Pilot_Skill_Present'], # Intermediate for forecasts
+                'RF_Flyability_Confidence': row['RF_Flyability_Confidence']
             }
             
             # Query the model for each variable separately
@@ -409,6 +410,7 @@ def predict_from_raw_weather(model, raw_weather_df):
             
             # Extract probabilities from DiscreteFactor objects
             # The values are ordered alphabetically by state name
+            # TODO review if these are still correct with the lock_categories function
             flyable_states = flyable_result.state_names['Is_Flyable']
             flyable_values = flyable_result.values
             flyable_prob = flyable_values[flyable_states.index('Yes')] if 'Yes' in flyable_states else 0

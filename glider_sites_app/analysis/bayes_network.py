@@ -26,6 +26,7 @@ NETWORK_GRAPH = [
         
         # Mechanics depends on Geometry (Alignment)
         ('Alignment_State',  'Site_Mechanics'),
+        ('Wind_State',      'Site_Mechanics'),
         
         # Lift depends on Lapse Rate and Ceiling
         ('Thermal_Quality',  'Lift_Potential'),
@@ -44,7 +45,7 @@ NETWORK_GRAPH = [
         # How loing are the best flights?
         ('Is_Flyable', 'Avg_Flight_Duration'),
         ('Lift_Potential', 'Avg_Flight_Duration'),
-        ('Wind_State', 'Avg_Flight_Duration'),
+        ('Site_Mechanics', 'Avg_Flight_Duration'),
 
         # How good is the flight? (Requires Flyability AND Lift)
         ('Is_Flyable',       'XC_Result'),
@@ -247,8 +248,20 @@ def add_intermediate_states(df_discrete):
             return 'Unsafe'
         return 'Safe'
     
+    def label_dynamic_lift(row):
+        # previous:
+        # df_discrete['Alignment_State'].apply(lambda x: 'On' if x in ['Perfect', 'Okay'] else 'Off')
+        if row['Alignment_State'] == 'Cross':
+            return 'Off'
+        if row['Alignment_State'] == 'Okay' and row['Wind_State'] in ['Strong', 'Very Strong']:
+            return 'On'
+        if row['Alignment_State'] == 'Perfect' and row['Wind_State'] in ['Ideal', 'Strong', 'Very Strong']:
+            return 'On'
+        
+        return 'Off'
+    
     df_discrete['Launch_Safety'] = df_discrete.apply(label_safety, axis=1)
-    df_discrete['Site_Mechanics'] = df_discrete['Alignment_State'].apply(lambda x: 'On' if x in ['Perfect', 'Okay'] else 'Off')
+    df_discrete['Site_Mechanics'] = df_discrete.apply(label_dynamic_lift, axis=1)
     df_discrete['Lift_Potential'] = df_discrete.apply(lambda x: 'Good' if x['Thermal_Quality'] in ['OK', 'Great'] else 'Bad', axis=1)
     
     return df_discrete
@@ -429,8 +442,11 @@ def lock_categories(df):
     """
     for node, states in STATE_NAMES.items():
         if node in df.columns:
-            # Convert to Categorical and explicitly pass ALL possible states
-            df[node] = pd.Categorical(df[node], categories=states, ordered=True)
+            # Check if we should treat it as an ordered progression
+            # Logic: Multi-step bins (Wind, Duration, XC) are Ordered. 
+            # Binary gates (Flyable, Mechanics) are Unordered.
+            is_ordered = True if len(states) > 2 else False
+            df[node] = pd.Categorical(df[node], categories=states, ordered=is_ordered   )
     return df
 
 
@@ -531,7 +547,7 @@ async def flight_predictor(site_name: str,
     # Save site-specific prior counts
     save_site_prior_counts(site_name, {node: df_bn[node].value_counts().to_dict() for node in model.nodes()})
 
-    logging.debug((model.get_cpds('XC_Result')))
+    logging.debug((model.get_cpds('Avg_Flight_Duration')))
     
     # Save model if requested
     if save_model:
@@ -575,6 +591,7 @@ async def flight_predictor(site_name: str,
             'Wind_State': 'Ideal', 
             'Thermal_Quality': 'Great', 
             'Ceiling_State': 'High',
+            'Alignment_State': 'Perfect',
             #'Wind_850_State': 'Light',
             'Is_Flyable': 'Yes' # We assume we launched
             , 'Pilot_Skill_Present': pilot_skill
@@ -617,7 +634,7 @@ if __name__ == '__main__':
 
     # Train and save model
     save=False
-    #asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
+    asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
     #asyncio.run(flight_predictor('Königszinne', save_model=save))
     #asyncio.run(flight_predictor('Börry', save_model=save))
     #asyncio.run(flight_predictor('Porta', save_model=save))
@@ -628,4 +645,4 @@ if __name__ == '__main__':
         'O': 12953
     }
     
-    asyncio.run(personal_predictor(FKPilotID=p['A']))
+    #asyncio.run(personal_predictor(FKPilotID=p['A']))

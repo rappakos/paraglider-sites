@@ -51,7 +51,7 @@ In the flatlands of northern Germany (Niedersachsen) we have some special consid
 * **Approach**: Supervised classification for binary flyability prediction (flyable/not flyable)
 * **Advantage**: Site-specific models capture local characteristics (terrain, orientation, typical weather patterns)
 * **Training strategy**: 
-  - Includes  only flying days and weekends to remove social factors
+  - Includes only flying days and weekends to remove social factors
   - Balanced dataset of flyable and unflyable dates
   - Uses weather conditions as features, flight occurrence as label
 * **Feature engineering** (7 key features):

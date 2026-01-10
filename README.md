@@ -1,8 +1,9 @@
 # paraglider-sites
 Connect paragliding flights and weather data
 
-## Paper
+## Background
 
+More about the methodology in the [Background](./BACKGROUND.md)
 
 ## 🚀 FastAPI Version Available!
 
@@ -37,7 +38,7 @@ Create a `.env` file with:
 PORT=3979
 ```
 
-5. **Running the applicaiton**
+5. **Running the applicaton**
 
 ```powershell
 uvicorn app:app --reload --host localhost --port 3979

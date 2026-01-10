@@ -73,6 +73,8 @@ In the flatlands of northern Germany (Niedersachsen) we have some special consid
 
 ### Bayesian Network
 
+![Bayes network](./bayesian_network_graph.png)
+
 * **Approach**: Probabilistic graphical model for multi-output prediction and causal reasoning
 * **Advantages over Random Forest**:
   - Explicitly models correlations between variables (interpretable structure)
@@ -94,5 +96,3 @@ In the flatlands of northern Germany (Niedersachsen) we have some special consid
 * **Output**: Provides probability distributions over discrete outcomes rather than point predictions (e.g., P(Flyable|weather), P(XC_Score_Category|weather, site, pilot))
 * **Discretization**: Continuous weather variables are binned into interpretable categories (e.g., wind speed: Low/Medium/High) to enable tractable probabilistic inference
 * **Disadvantage**: Physical parameters need careful discretization (handling continuous random variables is more complicated)
-
-**TODO**: Add Bayesian Network structure graph showing nodes and edges

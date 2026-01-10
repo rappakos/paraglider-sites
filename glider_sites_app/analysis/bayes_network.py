@@ -628,6 +628,121 @@ async def personal_predictor(FKPilotID: str):
 
     logger.info(pd.DataFrame(results))
 
+async def export_graph(output_file: str = 'bayesian_network_graph.png'):
+    """
+    Export the Bayesian Network graph structure as a PNG image.
+    
+    Args:
+        output_file: Path to save the PNG file (default: 'bayesian_network_graph.png')
+    """
+    try:
+        import networkx as nx
+        import matplotlib.pyplot as plt
+        from pathlib import Path
+        
+        # Create the model structure (no training needed)
+        model = BayesianNetwork(NETWORK_GRAPH)
+        
+        # Create a directed graph for visualization
+        G = nx.DiGraph()
+        G.add_edges_from(NETWORK_GRAPH)
+        
+        # Define node colors based on layers
+        layer_1_physics = ['Wind_State', 'Turbulence_State', 'Alignment_State', 
+                          'Thermal_Quality', 'Ceiling_State', 'Wind_850_State']
+        layer_2_intermediate = ['Launch_Safety', 'Site_Mechanics', 'Lift_Potential']
+        layer_3_decision = ['Is_Flyable']
+        layer_4_output = ['XC_Result', 'Avg_Flight_Duration']
+        layer_social = ['Social_Window', 'Pilot_Skill_Present', 'RF_Flyability_Confidence']
+        
+        node_colors = []
+        for node in G.nodes():
+            if node in layer_1_physics:
+                node_colors.append('#87CEEB')  # Sky blue - Physics
+            elif node in layer_2_intermediate:
+                node_colors.append('#FFD700')  # Gold - Intermediate
+            elif node in layer_3_decision:
+                node_colors.append('#FF6B6B')  # Red - Decision
+            elif node in layer_4_output:
+                node_colors.append('#4ECDC4')  # Teal - Output
+            elif node in layer_social:
+                node_colors.append('#95E1D3')  # Light green - Social
+            else:
+                node_colors.append('#CCCCCC')  # Gray - Other
+        
+        # Create hierarchical layout with 3 levels
+        pos = {}
+        
+        # Level 1: Input layer (top) - Physics and Social factors
+        input_nodes = layer_1_physics + layer_social
+        level1_width = len(input_nodes)
+        for i, node in enumerate(input_nodes):
+            pos[node] = (i - level1_width/2, 2)
+        
+        # Level 2: Intermediate layer (middle) - Intermediate states only
+        intermediate_nodes = layer_2_intermediate
+        level2_width = len(intermediate_nodes)
+        for i, node in enumerate(intermediate_nodes):
+            pos[node] = (i - level2_width/2, 1)
+        
+        # Level 2.5: Flyability decision (halfway between intermediate and output)
+        decision_nodes = layer_3_decision
+        for i, node in enumerate(decision_nodes):
+            pos[node] = (1.5, 0.5)  # Shifted right, halfway vertically
+        
+        # Level 3: Output layer (bottom) - Final predictions
+        output_nodes = layer_4_output
+        level3_width = len(output_nodes)
+        for i, node in enumerate(output_nodes):
+            pos[node] = (i - level3_width/2, 0)
+        
+        # Create figure
+        plt.figure(figsize=(18, 10))
+        
+        # Draw nodes
+        nx.draw_networkx_nodes(G, pos, node_color=node_colors, 
+                              node_size=3000, alpha=0.9)
+        
+        # Draw edges
+        nx.draw_networkx_edges(G, pos, edge_color='gray', 
+                              arrows=True, arrowsize=20, 
+                              arrowstyle='->', width=2, alpha=0.6)
+        
+        # Draw labels
+        nx.draw_networkx_labels(G, pos, font_size=9, font_weight='bold')
+        
+        # Add legend
+        from matplotlib.patches import Patch
+        legend_elements = [
+            Patch(facecolor='#87CEEB', label='Input: Physics Layer'),
+            Patch(facecolor='#95E1D3', label='Input: Social/Model Factors'),
+            Patch(facecolor='#FFD700', label='Intermediate: Safety/Mechanics/Lift'),
+            Patch(facecolor='#FF6B6B', label='Intermediate: Flyability Decision'),
+            Patch(facecolor='#4ECDC4', label='Output: Predictions')
+        ]
+        plt.legend(handles=legend_elements, loc='lower left', fontsize=15)
+        
+        plt.title('Bayesian Network Structure for Paragliding Forecast', 
+                 fontsize=16, fontweight='bold', pad=20)
+        plt.axis('off')
+        plt.tight_layout()
+        
+        # Save figure
+        output_path = Path(output_file)
+        plt.savefig(output_path, dpi=300, bbox_inches='tight', 
+                   facecolor='white', edgecolor='none')
+        plt.close()
+        
+        logger.info(f"Graph exported successfully to {output_path.absolute()}")
+        logger.info(f"Nodes: {len(G.nodes())}, Edges: {len(G.edges())}")
+        
+    except ImportError as e:
+        logger.error(f"Missing required library: {e}")
+        logger.error("Install with: pip install networkx matplotlib")
+    except Exception as e:
+        logger.error(f"Failed to export graph: {e}")
+
+
 if __name__ == '__main__':
     import asyncio
     
@@ -636,7 +751,7 @@ if __name__ == '__main__':
 
     # Train and save model
     save=False
-    asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
+    #asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
     #asyncio.run(flight_predictor('Königszinne', save_model=save))
     #asyncio.run(flight_predictor('Börry', save_model=save))
     #asyncio.run(flight_predictor('Porta', save_model=save))
@@ -648,3 +763,5 @@ if __name__ == '__main__':
     }
     
     #asyncio.run(personal_predictor(FKPilotID=p['A']))
+
+    asyncio.run(export_graph())

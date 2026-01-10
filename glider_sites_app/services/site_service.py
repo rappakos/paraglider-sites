@@ -1,6 +1,7 @@
 # services/site_service.py
 import asyncio
 import logging
+from datetime import datetime, timedelta
 from glider_sites_app.repositories.sites_repository import get_stats
 from glider_sites_app.analysis.model_loader import load_site_model, load_bayesian_model
 from glider_sites_app.analysis.bayes_network import predict_from_raw_weather
@@ -8,6 +9,16 @@ from glider_sites_app.services.weather_service import load_forecast_weather
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Simple in-memory cache with TTL
+_forecast_cache = {}
+CACHE_TTL = timedelta(hours=6)
+
+def _is_cache_valid(cache_entry):
+    """Check if cache entry is still valid"""
+    if cache_entry is None:
+        return False
+    return datetime.now() - cache_entry['timestamp'] < CACHE_TTL
 
 async def get_all_sites():
     """Get all paraglider sites with statistics"""
@@ -34,7 +45,18 @@ async def get_site_data(site_name: str):
     return result
 
 async def get_forecast_data(site_name: str, start_date: str = '2025-06-01', end_date: str = '2025-06-07'):
-    """Helper function to get forecast data for a site (placeholder)"""
+    """Helper function to get forecast data for a site with caching"""
+    
+    # Check cache
+    cache_key = f"{site_name}:{start_date}:{end_date}"
+    cache_entry = _forecast_cache.get(cache_key)
+    
+    if _is_cache_valid(cache_entry):
+        logger.info(f"Cache hit for {cache_key}")
+        return cache_entry['data']
+    
+    logger.info(f"Cache miss for {cache_key}, fetching fresh data")
+    
     all_stats = await get_stats()
     current = all_stats[all_stats['site_name'] == site_name]
     if current.empty:
@@ -78,5 +100,12 @@ async def get_forecast_data(site_name: str, start_date: str = '2025-06-01', end_
 
     logging.debug(weather_df.columns.values)
 
-    forecast_data = {"forecast": weather_df.to_dict('records')}  
+    forecast_data = {"forecast": weather_df.to_dict('records')}
+    
+    # Cache the result
+    _forecast_cache[cache_key] = {
+        'data': forecast_data,
+        'timestamp': datetime.now()
+    }
+    
     return forecast_data

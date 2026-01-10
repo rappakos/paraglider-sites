@@ -17,7 +17,7 @@
         </tr>
         {% for row in data %}
         <tr>
-            <td><a href="/site/{{row.site_name}}">{{row.site_name}}</a></td>
+            <td><a href="{{ url_for('site_details', site_name=row.site_name) }}">{{row.site_name}}</a></td>
             <td>{{row.dhv_site_id}}</th>
             <td>{{row.geo_latitude|round(5)}}</td>
             <td>{{row.geo_longitude|round(5)}}</td>

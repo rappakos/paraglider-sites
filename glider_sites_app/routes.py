@@ -1,3 +1,4 @@
+import os
 import pathlib
 from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Request, Query
@@ -12,10 +13,12 @@ PROJECT_ROOT = pathlib.Path(__file__).parent
 # Setup Jinja2 templates
 templates = Jinja2Templates(directory=str(PROJECT_ROOT / "templates"))
 
+prefix = os.environ.get('GLIDER_SITES_APP_PREFIX', '')
+
 # Create API router
-api_router = APIRouter(prefix="/api", tags=["sites"])
+api_router = APIRouter(prefix=prefix+"/api", tags=["sites"])
 # Create page router for HTML views
-page_router = APIRouter(tags=["pages"])
+page_router = APIRouter(prefix=prefix,tags=["pages"])
 
 @api_router.get("/", response_model=List[SiteStats])
 async def api_get_all_sites():

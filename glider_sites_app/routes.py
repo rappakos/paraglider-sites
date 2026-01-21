@@ -81,6 +81,7 @@ async def forecast_page(
     end_date = (start_dt + timedelta(days=5)).strftime('%Y-%m-%d')
     
     site_data = await get_all_sites()
+
     for site in site_data:
         # Get full site data which includes has_model
         site_details = await get_site_data(site['site_name'])
@@ -90,6 +91,8 @@ async def forecast_page(
             site['forecast'] = forecast
         else:
             site['has_model'] = False
+
+    site_data.sort(key=lambda x: x.get('main_direction', ''), reverse=True)            
     return templates.TemplateResponse("forecast.html", {"request": request,"start_date": start_date,  "data": site_data})
 
 @page_router.get("/site/{site_name}")

@@ -5,6 +5,71 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/forecast.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/datepicker.css') }}">
+<style>
+
+.site-header {
+    font-weight: bold;
+    text-align: center;
+    padding: 12px 8px;
+    font-size: 1em;
+    color: #333;
+}
+
+.date-header {
+    text-align: center;
+    padding: 8px 4px;
+}
+
+.date-day {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #333;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.date-weekday {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #667eea;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: block;
+}
+
+.date-month {
+    font-size: 0.75em;
+    color: #999;
+    display: block;
+    margin-top: 2px;
+}
+
+.date-header.today {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+}
+
+.date-header.today .date-day,
+.date-header.today .date-weekday,
+.date-header.today .date-month {
+    color: white;
+}
+
+@media screen and (max-width: 768px) {
+    .date-day {
+        font-size: 0.9em;
+    }
+    
+    .date-weekday {
+        font-size: 0.7em;
+    }
+    
+    .date-month {
+        display: none;
+    }
+}
+</style>
+
 {% endblock %}
 
 {% block content %}
@@ -31,12 +96,26 @@
 <table class="w3-table w3-bordered">
     <thead>
         <tr>
-            <th>Site</th>
+            <th><div class="site-header">Sites</div></th>
             {% if data %}
                 {% for site in data[:1] %}
                     {% if site.get('has_model') and site.get('forecast') and site.forecast.forecast %}
                         {% for day in site.forecast.forecast[:7] %}
-                            <th>{{ day.get('date', day.get('time', ''))|string|truncate(10, True, '') }}</th>
+                        <th>
+                            {% set date_obj = day.get('date', day.get('time', '')) %}
+                            {% if date_obj %}
+                                {% set date_str = date_obj|string %}
+                                {% set date_parts = date_str.split('-') %}
+                                {% set weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                                {% set months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] %}
+                                
+                                <div class="date-header {% if loop.index0 == 0 %}today{% endif %}">
+                                    <span class="date-weekday">{{ weekdays[loop.index0 % 7] }}</span>
+                                    <span class="date-day">{{ date_parts[2]|truncate(2, True, '') if date_parts|length > 2 else date_str }}</span>
+                                    <span class="date-month">{{ months[date_parts[1]|int] if date_parts|length > 1 else '' }}</span>
+                                </div>
+                            {% endif %}
+                        </th>
                         {% endfor %}
                     {% endif %}
                 {% endfor %}

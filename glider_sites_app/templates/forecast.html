@@ -38,7 +38,7 @@
                     {% if site.get('forecast') and site.forecast.forecast %}
                         {% for day in site.forecast.forecast[:7] %}
                             <td class="{{ 'A' if day.rf_prediction == 1 else 'C' }}">
-                               RF: {{ day.rf_prediction }} ({{(day.rf_confidence*100)|round(1)}}%) vs BN: {{ day.is_flyable}}
+                               RF: {{ day.rf_prediction }} ({{(day.rf_confidence*100)|round(1)}}%) vs BN: {{ day.is_flyable}} ({{(day.is_flyable_prob*100)|round(1)}}%)
                             </td>
                         {% endfor %}
                     {% else %}

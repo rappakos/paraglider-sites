@@ -88,7 +88,7 @@ async def get_forecast_data(site_name: str, start_date: str = '2025-06-01', end_
         
         # Merge predictions into weather_df
         weather_df['is_flyable'] = bayesian_predictions['predicted_flyable']
-        weather_df['is_flyable_prob'] = bayesian_predictions['is_flyable_prob']
+        weather_df['is_flyable_prob'] = bayesian_predictions.apply(lambda row: row['is_flyable_prob'] if row['is_flyable_prob'] > 0.5 else 1 - row['is_flyable_prob'], axis=1)
         weather_df['xc_potential'] = bayesian_predictions.apply(
             lambda row: max(
                 (row['xc_local_prob'], 'Local'),
@@ -109,3 +109,23 @@ async def get_forecast_data(site_name: str, start_date: str = '2025-06-01', end_
     }
     
     return forecast_data
+
+
+if __name__ == "__main__":
+    import asyncio
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    
+    async def main():
+        sites = await get_all_sites()
+        print(f"Loaded {len(sites)} sites")
+        
+        site_name = sites[0]['site_name']
+        site_data = await get_site_data(site_name)
+        print(f"Site data for {site_name}: {site_data}")
+        
+        forecast_data = await get_forecast_data(site_name, '2026-01-21', '2026-01-27')
+        print(f"Forecast data for {site_name}: {forecast_data}")
+
+    asyncio.run(main())

@@ -5,70 +5,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/forecast.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/datepicker.css') }}">
-<style>
-
-.site-header {
-    font-weight: bold;
-    text-align: center;
-    padding: 12px 8px;
-    font-size: 1em;
-    color: #333;
-}
-
-.date-header {
-    text-align: center;
-    padding: 8px 4px;
-}
-
-.date-day {
-    font-size: 1.1em;
-    font-weight: bold;
-    color: #333;
-    display: block;
-    margin-bottom: 4px;
-}
-
-.date-weekday {
-    font-size: 0.85em;
-    font-weight: 600;
-    color: #667eea;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    display: block;
-}
-
-.date-month {
-    font-size: 0.75em;
-    color: #999;
-    display: block;
-    margin-top: 2px;
-}
-
-.date-header.today {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 8px;
-}
-
-.date-header.today .date-day,
-.date-header.today .date-weekday,
-.date-header.today .date-month {
-    color: white;
-}
-
-@media screen and (max-width: 768px) {
-    .date-day {
-        font-size: 0.9em;
-    }
-    
-    .date-weekday {
-        font-size: 0.7em;
-    }
-    
-    .date-month {
-        display: none;
-    }
-}
-</style>
+<link rel="stylesheet" href="{{ url_for('static', path='css/forecast_headers.css') }}">
 
 {% endblock %}
 
@@ -92,7 +29,7 @@
         </div>
     </form>
 </div>
-
+<div style="overflow-x: auto;">
 <table class="w3-table w3-bordered">
     <thead>
         <tr>
@@ -126,7 +63,25 @@
         {% for site in data %}
             {% if site.get('has_model') %}
                 <tr>
-                    <td><a href="{{ url_for('site_details', site_name=site.site_name) }}">{{ site.site_name }}</a></td>
+                <td class="site-cell">
+                    <div class="site-name-wrapper">
+                        <!-- Compass with needle pointing to main_direction -->
+                        <div class="compass">
+                            {% set direction = site.get('main_direction', 0) %}
+                            
+                            <span class="compass-label n">N</span>
+                            <div class="compass-needle" style="transform: rotate({{ direction }}deg);"></div>
+                            <div class="compass-center"></div>
+                        </div>
+                        
+                        <div>
+                            <a href="{{ url_for('site_details', site_name=site.site_name) }}" class="site-name">
+                                {{ site.site_name }}
+                            </a>
+                            <span class="site-direction">{{ site.get('main_direction', 'N/A') }}°</span>
+                        </div>
+                    </div>
+                </td>
                     {% if site.get('forecast') and site.forecast.forecast %}
                         {% for day in site.forecast.forecast[:7] %}
                             <td class="forecast-cell">
@@ -209,4 +164,5 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% endblock %}

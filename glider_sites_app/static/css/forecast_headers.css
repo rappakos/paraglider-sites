@@ -1,0 +1,170 @@
+
+
+.site-cell {
+    padding: 12px 8px;
+    background: linear-gradient(to right, #f8f9fa, #ffffff);
+    border-left: 4px solid #667eea;
+    position: sticky;
+    left: 0;
+    z-index: 10;
+}
+
+.site-header {
+    font-weight: bold;
+    text-align: center;
+    padding: 12px 8px;
+    font-size: 1em;
+    color: #333;
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    background: white;
+}
+
+.compass {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+}
+
+.compass-needle {
+    position: absolute;
+    width: 2px;
+    height: 16px;
+    background: white;
+    transform-origin: center bottom;
+    bottom: 50%;
+    left: 50%;
+    margin-left: -1px;
+    border-radius: 2px 2px 0 0;
+}
+
+.compass-center {
+    width: 6px;
+    height: 6px;
+    background: white;
+    border-radius: 50%;
+    z-index: 1;
+}
+
+.compass-label {
+    position: absolute;
+    font-size: 0.7em;
+    font-weight: bold;
+    color: white;
+}
+
+.compass-label.n { top: 2px; left: 50%; transform: translateX(-50%); }
+.compass-label.e { right: 4px; top: 50%; transform: translateY(-50%); }
+.compass-label.s { bottom: 2px; left: 50%; transform: translateX(-50%); }
+.compass-label.w { left: 4px; top: 50%; transform: translateY(-50%); }
+
+.site-name {
+    font-weight: 600;
+    font-size: 1em;
+    color: #333;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.site-name:hover {
+    color: #667eea;
+}
+
+.site-direction {
+    font-size: 0.75em;
+    color: #667eea;
+    font-weight: 600;
+    display: block;
+    margin-top: 2px;
+}
+
+.site-header {
+    font-weight: bold;
+    text-align: center;
+    padding: 12px 8px;
+    font-size: 1em;
+    color: #333;
+}
+
+.date-header {
+    text-align: center;
+    padding: 8px 4px;
+}
+
+.date-day {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #333;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.date-weekday {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #667eea;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: block;
+}
+
+.date-month {
+    font-size: 0.75em;
+    color: #999;
+    display: block;
+    margin-top: 2px;
+}
+
+.date-header.today {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+}
+
+.date-header.today .date-day,
+.date-header.today .date-weekday,
+.date-header.today .date-month {
+    color: white;
+}
+
+@media screen and (max-width: 768px) {
+    .compass {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .compass-needle {
+        height: 12px;
+    }
+    
+    .compass-label {
+        font-size: 0.6em;
+    }
+    
+    .site-name {
+        font-size: 0.9em;
+    }
+    
+    .site-direction {
+        font-size: 0.7em;
+    }
+    
+    .date-day {
+        font-size: 0.9em;
+    }
+    
+    .date-weekday {
+        font-size: 0.7em;
+    }
+    
+    .date-month {
+        display: none;
+    }
+}

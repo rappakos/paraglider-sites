@@ -4,6 +4,104 @@
 
 {% block content %}
 
+<style>
+.forecast-cell {
+    padding: 4px;
+    min-width: 140px;
+}
+
+.forecast-cell-content {
+    border: 3px solid;
+    border-radius: 8px;
+    /*padding: 4px;*/
+}
+
+.forecast-cell-flyable {
+    border-color: #4caf50;
+}
+
+.forecast-cell-nofly {
+    border-color: #f44336;
+}
+
+.predictions-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.prediction-section {
+    flex: 1;
+    padding: 4px;
+    border-radius: 3px;
+    text-align: center;
+}
+
+.rf-section {
+    background-color: #e3f2fd;
+}
+
+.bn-section {
+    background-color: #f3e5f5;
+}
+
+.airtime-section {
+    background-color: #fff3e0;
+    font-size: 0.85em;
+    padding: 4px;
+    border-radius: 3px;
+}
+
+.prediction-label {
+    font-weight: bold;
+    font-size: 0.9em;
+    color: #555;
+}
+
+.prediction-icon {
+    font-size: 1.5em;
+    display: block;
+    margin: 2px 0;
+}
+
+.icon-yes {
+    color: #4caf50;
+}
+
+.icon-no {
+    color: #f44336;
+}
+
+.confidence {
+    font-size: 0.85em;
+    color: #666;
+    display: block;
+}
+
+.airtime-bar {
+    display: flex;
+    margin-top: 4px;
+    height: 20px;
+    border-radius: 3px;
+    overflow: hidden;
+    background-color: #e0e0e0;
+}
+
+.airtime-segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7em;
+    color: white;
+    font-weight: bold;
+}
+
+.airtime-veryshort { background-color: #ef5350; }
+.airtime-short { background-color: #ffa726; }
+.airtime-medium { background-color: #66bb6a; }
+.airtime-long { background-color: #42a5f5; }
+</style>
+
 <div class="w3-container w3-margin-bottom">
     <form method="GET" action="{{ url_for('forecast_page') }}">
         <label for="start_date">Start Date:</label>
@@ -23,8 +121,6 @@
                         {% for day in site.forecast.forecast[:7] %}
                             <th>{{ day.get('date', day.get('time', ''))|string|truncate(10, True, '') }}</th>
                         {% endfor %}
-                    {% else %}
-                        <!-- only first row has headers -->
                     {% endif %}
                 {% endfor %}
             {% endif %}
@@ -37,10 +133,71 @@
                     <td><a href="{{ url_for('site_details', site_name=site.site_name) }}">{{ site.site_name }}</a></td>
                     {% if site.get('forecast') and site.forecast.forecast %}
                         {% for day in site.forecast.forecast[:7] %}
-                            <td class="{{ 'A' if day.rf_prediction == 1 else 'C' }}">
-                               RF: {{ day.rf_prediction }} ({{(day.rf_confidence*100)|round(1)}}%) vs BN: {{ day.is_flyable}} ({{(day.is_flyable_prob*100)|round(1)}}%)
-                               <br />
-                               45min: {{ (day.get('45min_prob', 0)*100)|round(1) }}% , 120min: {{ (day.get('120min_prob', 0)*100)|round(1) }}%
+                            <td class="forecast-cell">
+                                <div class="forecast-cell-content {% if day.rf_prediction == 1 or day.rf_prediction == 'Yes' %}forecast-cell-flyable{% else %}forecast-cell-nofly{% endif %}">
+                                    <!-- RF and BN Predictions Side by Side -->
+                                    <div class="predictions-row">
+                                        <!-- Random Forest Prediction -->
+                                        <div class="prediction-section rf-section">
+                                            <div class="prediction-label">RF</div>
+                                            {% if day.rf_prediction == 1 or day.rf_prediction == 'Yes' %}
+                                                <span class="prediction-icon icon-yes">✓</span>
+                                            {% else %}
+                                                <span class="prediction-icon icon-no">✗</span>
+                                            {% endif %}
+                                            <span class="confidence">{{ (day.rf_confidence * 100)|round(0)|int }}%</span>
+                                        </div>
+                                        
+                                        <!-- Bayesian Network Prediction -->
+                                        <div class="prediction-section bn-section">
+                                            <div class="prediction-label">BN</div>
+                                            {% if day.is_flyable == 'Yes' or day.is_flyable == 1 %}
+                                                <span class="prediction-icon icon-yes">✓</span>
+                                            {% else %}
+                                                <span class="prediction-icon icon-no">✗</span>
+                                            {% endif %}
+                                            <span class="confidence">{{ (day.is_flyable_prob * 100)|round(0)|int }}%</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Airtime Distribution -->
+                                    <div class="airtime-section">
+                                        <div class="prediction-label">Airtime</div>
+                                        <div class="airtime-bar">
+                                            {% set veryshort_prob = (day.get('abgleiter', 0) * 100)|round(0)|int %}
+                                            {% set short_prob = (day.get('9min_prob', 0) * 100)|round(0)|int %}
+                                            {% set medium_prob = (day.get('45min_prob', 0) * 100)|round(0)|int %}
+                                            {% set long_prob = (day.get('120min_prob', 0) * 100)|round(0)|int %}
+                                            
+                                            {% if veryshort_prob > 0 %}
+                                            <div class="airtime-segment airtime-veryshort" style="width: {{ veryshort_prob }}%;" title="<9min">
+                                                {% if veryshort_prob > 10 %}{{ veryshort_prob }}%{% endif %}
+                                            </div>
+                                            {% endif %}
+                                            
+                                            {% if short_prob > 0 %}
+                                            <div class="airtime-segment airtime-short" style="width: {{ short_prob }}%;" title="9-45min">
+                                                {% if short_prob > 10 %}{{ short_prob }}%{% endif %}
+                                            </div>
+                                            {% endif %}
+                                            
+                                            {% if medium_prob > 0 %}
+                                            <div class="airtime-segment airtime-medium" style="width: {{ medium_prob }}%;" title="45-120min">
+                                                {% if medium_prob > 10 %}{{ medium_prob }}%{% endif %}
+                                            </div>
+                                            {% endif %}
+                                            
+                                            {% if long_prob > 0 %}
+                                            <div class="airtime-segment airtime-long" style="width: {{ long_prob }}%;" title=">120min">
+                                                {% if long_prob > 10 %}{{ long_prob }}%{% endif %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <div style="font-size: 0.75em; color: #666; margin-top: 2px;">
+                                            &lt;9: {{ veryshort_prob }}% | 9-45: {{ short_prob }}% | 45-120: {{ medium_prob }}% | &gt;120: {{ long_prob }}%
+                                        </div>
+                                    </div>
+                                </div>
                             </td>
                         {% endfor %}
                     {% else %}

@@ -97,6 +97,8 @@ async def get_forecast_data(site_name: str, start_date: str = '2025-06-01', end_
         #     )[1] if row['is_flyable_prob'] > 0.5 else 'Sled',
         #     axis=1
         # )
+        weather_df['abgleiter'] = bayesian_predictions['abgleiter']
+        weather_df['9min_prob'] = bayesian_predictions['9min_prob']
         weather_df['45min_prob'] = bayesian_predictions['45min_prob']
         weather_df['120min_prob'] = bayesian_predictions['120min_prob']
 

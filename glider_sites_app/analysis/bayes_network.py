@@ -427,10 +427,12 @@ def predict_from_raw_weather(model, raw_weather_df):
                 'date': raw_weather_df.iloc[idx].get('date', idx),
                 'is_flyable_prob': flyable_prob,
                 'predicted_flyable': 'Yes' if flyable_prob > 0.5 else 'No',
+                'abgleiter': airtime_values[airtime_states.index('A-Abgleiter')] if 'A-Abgleiter' in airtime_states else 0,
+                '9min_prob': airtime_values[airtime_states.index('B-Soaring')] if 'B-Soaring' in airtime_states else 0,
                 '45min_prob': airtime_values[airtime_states.index('C-Good')] if 'C-Good' in airtime_states else 0,
                 '120min_prob': airtime_values[airtime_states.index('D-Epic')] if 'D-Epic' in airtime_states else 0
             })
-            
+
         except Exception as e:
             logger.warning(f"Prediction failed for row {idx}: {e}")
             predictions.append({

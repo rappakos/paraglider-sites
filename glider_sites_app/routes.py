@@ -2,6 +2,8 @@ import os
 import pathlib
 from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Request, Query
+from fastapi.staticfiles import StaticFiles
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from typing import List, Optional
 from .schemas import (
@@ -108,7 +110,7 @@ async def site_details(request: Request, site_name: str):
 
 def setup_routes(app):
     """Setup all routes for the FastAPI app"""
-    
+    app.mount("/static", StaticFiles(directory="glider_sites_app/static"), name="static")
     app.include_router(api_router)
     app.include_router(page_router)
 

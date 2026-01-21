@@ -11,9 +11,8 @@
 }
 
 .forecast-cell-content {
-    border: 3px solid;
+    border: 2px solid;
     border-radius: 8px;
-    /*padding: 4px;*/
 }
 
 .forecast-cell-flyable {
@@ -33,8 +32,9 @@
 .prediction-section {
     flex: 1;
     padding: 4px;
-    border-radius: 3px;
+    border-radius: 4px;
     text-align: center;
+    min-width: 0; /* Allow flex items to shrink below content size */
 }
 
 .rf-section {
@@ -47,19 +47,22 @@
 
 .airtime-section {
     background-color: #fff3e0;
-    font-size: 0.85em;
-    padding: 4px;
-    border-radius: 3px;
+    padding: 6px;
+    border-radius: 4px;
 }
 
 .prediction-label {
     font-weight: bold;
-    font-size: 0.9em;
+    font-size: 0.75em; /* Reduced from 0.9em */
     color: #555;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .prediction-icon {
-    font-size: 1.5em;
+    font-size: 1.2em; /* Reduced from 1.5em */
     display: block;
     margin: 2px 0;
 }
@@ -73,33 +76,104 @@
 }
 
 .confidence {
-    font-size: 0.85em;
+    font-size: 0.75em; /* Reduced from 0.85em */
     color: #666;
     display: block;
 }
 
-.airtime-bar {
+.airtime-bars {
     display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    height: 60px; /* Reduced from 80px */
     margin-top: 4px;
-    height: 20px;
-    border-radius: 3px;
-    overflow: hidden;
-    background-color: #e0e0e0;
+    padding: 0 2px;
 }
 
-.airtime-segment {
+.airtime-bar-item {
+    flex: 1;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    font-size: 0.7em;
-    color: white;
-    font-weight: bold;
+    margin: 0 1px;
+    min-width: 0;
 }
 
-.airtime-veryshort { background-color: #ef5350; }
-.airtime-short { background-color: #ffa726; }
-.airtime-medium { background-color: #66bb6a; }
-.airtime-long { background-color: #42a5f5; }
+.airtime-bar-visual {
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    transition: all 0.3s ease;
+    min-height: 2px; /* Ensure bars are visible even at 0% */
+}
+
+.airtime-bar-visual:hover {
+    opacity: 0.8;
+}
+
+.airtime-icon {
+    font-size: 1em; /* Reduced from 1.2em */
+    margin-bottom: 2px;
+}
+
+.airtime-label {
+    font-size: 0.6em; /* Reduced from 0.65em */
+    color: #666;
+    margin-top: 2px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.airtime-percent {
+    font-size: 0.65em; /* Reduced from 0.75em */
+    font-weight: bold;
+    color: #333;
+    margin-top: 2px;
+}
+
+.bar-veryshort { background-color: #ef5350; }
+.bar-short { background-color: #ffa726; }
+.bar-medium { background-color: #66bb6a; }
+.bar-long { background-color: #42a5f5; }
+
+/* Mobile optimizations */
+@media screen and (max-width: 768px) {
+    .forecast-cell {
+        min-width: 100px;
+        padding: 2px;
+    }
+    
+    .forecast-cell-content {
+        padding: 4px;
+    }
+    
+    .prediction-label {
+        font-size: 0.65em;
+    }
+    
+    .prediction-icon {
+        font-size: 1em;
+    }
+    
+    .confidence {
+        font-size: 0.65em;
+    }
+    
+    .airtime-bars {
+        height: 50px;
+    }
+    
+    .airtime-icon {
+        font-size: 0.9em;
+    }
+    
+    .airtime-percent {
+        font-size: 0.6em;
+    }
+    
+    .airtime-label {
+        font-size: 0.55em;
+    }
+}
 </style>
 
 <div class="w3-container w3-margin-bottom">
@@ -162,39 +236,44 @@
                                     
                                     <!-- Airtime Distribution -->
                                     <div class="airtime-section">
-                                        <div class="prediction-label">Airtime</div>
-                                        <div class="airtime-bar">
-                                            {% set veryshort_prob = (day.get('abgleiter', 0) * 100)|round(0)|int %}
-                                            {% set short_prob = (day.get('9min_prob', 0) * 100)|round(0)|int %}
-                                            {% set medium_prob = (day.get('45min_prob', 0) * 100)|round(0)|int %}
-                                            {% set long_prob = (day.get('120min_prob', 0) * 100)|round(0)|int %}
-                                            
-                                            {% if veryshort_prob > 0 %}
-                                            <div class="airtime-segment airtime-veryshort" style="width: {{ veryshort_prob }}%;" title="<9min">
-                                                {% if veryshort_prob > 10 %}{{ veryshort_prob }}%{% endif %}
+                                        <div class="prediction-label">Flight Duration</div>
+                                        {% set veryshort_prob = (day.get('abgleiter', 0) * 100)|round(0)|int %}
+                                        {% set short_prob = (day.get('9min_prob', 0) * 100)|round(0)|int %}
+                                        {% set medium_prob = (day.get('45min_prob', 0) * 100)|round(0)|int %}
+                                        {% set long_prob = (day.get('120min_prob', 0) * 100)|round(0)|int %}
+                                        
+                                        <div class="airtime-bars">
+                                            <!-- <9 min -->
+                                            <div class="airtime-bar-item">
+                                                <div class="airtime-icon">⚡</div>
+                                                <div class="airtime-bar-visual bar-veryshort" style="height: {{ veryshort_prob }}%;" title="<9 minutes"></div>
+                                                <div class="airtime-percent">{{ veryshort_prob }}%</div>
+                                                <div class="airtime-label">&lt;9m</div>
                                             </div>
-                                            {% endif %}
                                             
-                                            {% if short_prob > 0 %}
-                                            <div class="airtime-segment airtime-short" style="width: {{ short_prob }}%;" title="9-45min">
-                                                {% if short_prob > 10 %}{{ short_prob }}%{% endif %}
+                                            <!-- 9-45 min -->
+                                            <div class="airtime-bar-item">
+                                                <div class="airtime-icon">🪂</div>
+                                                <div class="airtime-bar-visual bar-short" style="height: {{ short_prob }}%;" title="9-45 minutes"></div>
+                                                <div class="airtime-percent">{{ short_prob }}%</div>
+                                                <div class="airtime-label">9-45m</div>
                                             </div>
-                                            {% endif %}
                                             
-                                            {% if medium_prob > 0 %}
-                                            <div class="airtime-segment airtime-medium" style="width: {{ medium_prob }}%;" title="45-120min">
-                                                {% if medium_prob > 10 %}{{ medium_prob }}%{% endif %}
+                                            <!-- 45-120 min -->
+                                            <div class="airtime-bar-item">
+                                                <div class="airtime-icon">🦅</div>
+                                                <div class="airtime-bar-visual bar-medium" style="height: {{ medium_prob }}%;" title="45-120 minutes"></div>
+                                                <div class="airtime-percent">{{ medium_prob }}%</div>
+                                                <div class="airtime-label">45-120m</div>
                                             </div>
-                                            {% endif %}
                                             
-                                            {% if long_prob > 0 %}
-                                            <div class="airtime-segment airtime-long" style="width: {{ long_prob }}%;" title=">120min">
-                                                {% if long_prob > 10 %}{{ long_prob }}%{% endif %}
+                                            <!-- >120 min -->
+                                            <div class="airtime-bar-item">
+                                                <div class="airtime-icon">🚀</div>
+                                                <div class="airtime-bar-visual bar-long" style="height: {{ long_prob }}%;" title=">120 minutes"></div>
+                                                <div class="airtime-percent">{{ long_prob }}%</div>
+                                                <div class="airtime-label">&gt;120m</div>
                                             </div>
-                                            {% endif %}
-                                        </div>
-                                        <div style="font-size: 0.75em; color: #666; margin-top: 2px;">
-                                            &lt;9: {{ veryshort_prob }}% | 9-45: {{ short_prob }}% | 45-120: {{ medium_prob }}% | &gt;120: {{ long_prob }}%
                                         </div>
                                     </div>
                                 </div>

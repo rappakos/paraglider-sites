@@ -113,7 +113,7 @@ async def site_details(request: Request, site_name: str):
 
 def setup_routes(app):
     """Setup all routes for the FastAPI app"""
-    app.mount("/static", StaticFiles(directory="glider_sites_app/static"), name="static")
+    app.mount(f"{os.getenv('GLIDER_SITES_APP_PREFIX', '')}/static", StaticFiles(directory="glider_sites_app/static"), name="static")
     app.include_router(api_router)
     app.include_router(page_router)
 

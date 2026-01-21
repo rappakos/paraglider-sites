@@ -19,6 +19,12 @@
               background-color:rgba(227, 109, 105, 0.5);
           }          
       
+          @media screen and (max-width: 768px) {
+              .page-title {
+                  display: none;
+              }
+          }
+
       </style>
     {% endblock %}
     {% block extra_css %}{% endblock %}    
@@ -28,7 +34,7 @@
       <header>
         {% include "./_menu.html" %}
       </header>
-      <h1>{{title}}</h1>
+      <h1 class="page-title">{{title}}</h1>
 
       {% block content %}
       {% endblock %}

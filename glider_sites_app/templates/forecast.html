@@ -4,15 +4,27 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/forecast.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/datepicker.css') }}">
 {% endblock %}
 
 {% block content %}
 <div class="w3-container w3-margin-bottom">
-    <form method="GET" action="{{ url_for('forecast_page') }}">
-        <label for="start_date">Start Date:</label>
-        <input type="date" id="start_date" name="start_date" value="{{ start_date or '' }}">
-        
-        <button type="submit" class="w3-button w3-blue">Update</button>
+    <form method="GET" action="{{ url_for('forecast_page') }}" id="forecast-form">
+        <div class="date-picker-container">
+            <div class="date-picker-wrapper">
+                <label for="start_date" class="date-picker-label">Select Forecast Date</label>
+                <div class="date-input-wrapper">
+                    <input 
+                        type="date" 
+                        id="start_date" 
+                        name="start_date" 
+                        value="{{ start_date or '' }}"
+                        class="fancy-date-input"
+                        onchange="this.form.submit()"
+                    >
+                </div>
+            </div>
+        </div>
     </form>
 </div>
 

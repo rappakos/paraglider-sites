@@ -1,0 +1,76 @@
+.date-picker-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.date-picker-wrapper {
+    position: relative;
+    flex: 1;
+    max-width: 300px;
+}
+
+.date-picker-label {
+    color: white;
+    font-weight: 600;
+    font-size: 0.9em;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.date-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.date-input-wrapper::before {
+    content: "📅";
+    position: absolute;
+    left: 12px;
+    font-size: 1.2em;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.fancy-date-input {
+    width: 100%;
+    padding: 10px 12px 10px 40px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.95);
+    font-size: 1em;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.fancy-date-input:hover {
+    background: white;
+    border-color: rgba(255, 255, 255, 0.6);
+}
+
+.fancy-date-input:focus {
+    outline: none;
+    border-color: white;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+}
+
+@media screen and (max-width: 768px) {
+    .date-picker-label {
+        display: none;
+    }
+    
+    .date-picker-container {
+        padding: 8px;
+        margin-top: 8px;
+    }
+    
+    .date-picker-wrapper {
+        max-width: 100%;
+    }
+}

@@ -407,7 +407,8 @@ def predict_from_raw_weather(model, raw_weather_df):
             # Query the model for each variable separately
             flyable_result = infer.query(variables=['Is_Flyable'], evidence=evidence)
             xc_result = infer.query(variables=['XC_Result'], evidence=evidence)
-            
+            duration_result = infer.query(variables=['Avg_Flight_Duration'], evidence=evidence)
+
             # Extract probabilities from DiscreteFactor objects
             # The values are ordered alphabetically by state name
             # TODO review if these are still correct with the lock_categories function
@@ -415,18 +416,21 @@ def predict_from_raw_weather(model, raw_weather_df):
             flyable_values = flyable_result.values
             flyable_prob = flyable_values[flyable_states.index('Yes')] if 'Yes' in flyable_states else 0
             
-            xc_states = xc_result.state_names['XC_Result']
-            xc_values = xc_result.values
+            #xc_states = xc_result.state_names['XC_Result']
+            #xc_values = xc_result.values
+
+            # Get flight duration probabilities
+            airtime_states = duration_result.state_names['Avg_Flight_Duration']
+            airtime_values = duration_result.values
             
             predictions.append({
                 'date': raw_weather_df.iloc[idx].get('date', idx),
                 'is_flyable_prob': flyable_prob,
-                'xc_sled_prob': xc_values[xc_states.index('A-Sled')] if 'A-Sled' in xc_states else 0,
-                'xc_local_prob': xc_values[xc_states.index('B-Local')] if 'B-Local' in xc_states else 0,
-                'xc_xc_prob': xc_values[xc_states.index('C-XC')] if 'C-XC' in xc_states else 0,
-                'xc_hammer_prob': xc_values[xc_states.index('D-Hammer')] if 'D-Hammer' in xc_states else 0,
-                'predicted_flyable': 'Yes' if flyable_prob > 0.5 else 'No'
+                'predicted_flyable': 'Yes' if flyable_prob > 0.5 else 'No',
+                '45min_prob': airtime_values[airtime_states.index('C-Good')] if 'C-Good' in airtime_states else 0,
+                '120min_prob': airtime_values[airtime_states.index('D-Epic')] if 'D-Epic' in airtime_states else 0
             })
+            
         except Exception as e:
             logger.warning(f"Prediction failed for row {idx}: {e}")
             predictions.append({

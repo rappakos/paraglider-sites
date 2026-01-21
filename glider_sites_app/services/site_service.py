@@ -89,14 +89,16 @@ async def get_forecast_data(site_name: str, start_date: str = '2025-06-01', end_
         # Merge predictions into weather_df
         weather_df['is_flyable'] = bayesian_predictions['predicted_flyable']
         weather_df['is_flyable_prob'] = bayesian_predictions.apply(lambda row: row['is_flyable_prob'] if row['is_flyable_prob'] > 0.5 else 1 - row['is_flyable_prob'], axis=1)
-        weather_df['xc_potential'] = bayesian_predictions.apply(
-            lambda row: max(
-                (row['xc_local_prob'], 'Local'),
-                (row['xc_xc_prob'], 'XC'),
-                (row['xc_hammer_prob'], 'Hammer')
-            )[1] if row['is_flyable_prob'] > 0.5 else 'Sled',
-            axis=1
-        )
+        # weather_df['xc_potential'] = bayesian_predictions.apply(
+        #     lambda row: max(
+        #         (row['xc_local_prob'], 'Local'),
+        #         (row['xc_xc_prob'], 'XC'),
+        #         (row['xc_hammer_prob'], 'Hammer')
+        #     )[1] if row['is_flyable_prob'] > 0.5 else 'Sled',
+        #     axis=1
+        # )
+        weather_df['45min_prob'] = bayesian_predictions['45min_prob']
+        weather_df['120min_prob'] = bayesian_predictions['120min_prob']
 
     logging.debug(weather_df.columns.values)
 

@@ -113,7 +113,7 @@
                                     
                                     <!-- Airtime Distribution -->
                                     <div class="airtime-section">
-                                        <div class="prediction-label">Flight Duration</div>
+                                        <div class="duration-label">Flight Duration</div>
                                         {% set veryshort_prob = (day.get('abgleiter', 0) * 100)|round(0)|int %}
                                         {% set short_prob = (day.get('9min_prob', 0) * 100)|round(0)|int %}
                                         {% set medium_prob = (day.get('45min_prob', 0) * 100)|round(0)|int %}

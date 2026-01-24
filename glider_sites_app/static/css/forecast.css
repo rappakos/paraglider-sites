@@ -24,10 +24,14 @@
 
 .prediction-section {
     flex: 1;
-    padding: 4px;
+    padding: 2px 4px;
     border-radius: 4px;
     text-align: center;
-    min-width: 0; /* Allow flex items to shrink below content size */
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
 }
 
 .rf-section {
@@ -44,20 +48,16 @@
     border-radius: 4px;
 }
 
-.prediction-label {
-    font-weight: bold;
-    font-size: 0.75em; /* Reduced from 0.9em */
-    color: #555;
-    margin-bottom: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.prediction-label, .duration-label {
+    font-size: 0.7em;
+    color: #666;
+    display: inline-block;    
 }
 
 .prediction-icon {
-    font-size: 1.2em; /* Reduced from 1.5em */
-    display: block;
-    margin: 2px 0;
+    font-size: 1.2em;
+    display: inline-block;
+    margin: 0;
 }
 
 .icon-yes {
@@ -69,9 +69,9 @@
 }
 
 .confidence {
-    font-size: 0.75em; /* Reduced from 0.85em */
+    font-size: 0.7em; 
     color: #666;
-    display: block;
+    display: inline-block;
 }
 
 .airtime-bars {
@@ -111,7 +111,7 @@
 .airtime-label {
     font-size: 0.6em; /* Reduced from 0.65em */
     color: #666;
-    margin-top: 2px;
+    margin-top: 1px;
     text-align: center;
     white-space: nowrap;
 }
@@ -164,6 +164,15 @@
     }
     
     .airtime-label {
-        font-size: 0.55em;
+        font-size: 0.5em; /* Reduced from 0.65em */
+        color: #666;
+        margin-top: 1px;
+        text-align: center;
+        white-space: nowrap;
     }
+
+    .duration-label {
+        display: none;
+    }
+
 }

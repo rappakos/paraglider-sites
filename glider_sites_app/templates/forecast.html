@@ -47,7 +47,7 @@
                                 {% set months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] %}
                                 
                                 <div class="date-header {% if loop.index0 == 0 %}today{% endif %}">
-                                    <span class="date-weekday">{{ weekdays[loop.index0 % 7] }}</span>
+                                    <span class="date-weekday">{{ date_obj.strftime('%a') if date_obj is not string else weekdays[loop.index0 % 7] }}</span>
                                     <span class="date-day">{{ date_parts[2]|truncate(2, True, '') if date_parts|length > 2 else date_str }}</span>
                                     <span class="date-month">{{ months[date_parts[1]|int] if date_parts|length > 1 else '' }}</span>
                                 </div>

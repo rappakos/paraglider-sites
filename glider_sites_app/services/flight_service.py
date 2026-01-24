@@ -151,7 +151,7 @@ async def load_all_flights(site_name: str):
 if __name__ == "__main__":
     import asyncio    
     from dotenv import load_dotenv
-    from glider_sites_app.analysis.probabilities import plot_flight_duration_distribution
+    from glider_sites_app.analysis.probabilities import fit_site_duration_distribution, plot_flight_duration_distribution
 
     load_dotenv()    
     #asyncio.run(sync_dhv_flights('Porta'))
@@ -161,17 +161,12 @@ if __name__ == "__main__":
     #asyncio.run(sync_xcontest_flights('Brunsberg'))
     #asyncio.run(xcontest_flight_count('Brunsberg'))
 
-    site_name = 'Börry'
-    #df = asyncio.run(load_flight_data(site_name))
-    #percentiles = df['avg_flight_duration'].quantile([0.25, 0.5, 0.75, 0.9])
-    #logger.info(f"\nFlight Duration Percentiles for {site_name}:")
-    #logger.info(f"25th percentile: {percentiles[0.25]:.2f}")
-    #logger.info(f"50th percentile (median): {percentiles[0.5]:.2f}")
-    #logger.info(f"75th percentile: {percentiles[0.75]:.2f}")
-    #logger.info(f"90th percentile: {percentiles[0.9]:.2f}")
-
-    df = asyncio.run(load_all_flights(site_name))
-    logger.info(f"\nTotal flights for site {site_name}: {len(df)}")
-    
-    # Fit GMM and plot
-    fig, stats = plot_flight_duration_distribution(df, site_name)
+    for site_name in ['Börry','Brunsberg','Rammelsberg NW','Rammelsberg SW','Porta']:
+        df = asyncio.run(load_all_flights(site_name))
+        logger.info(f"\nTotal flights for site {site_name}: {len(df)}")
+        
+        # Fit GMM
+        stats = fit_site_duration_distribution(df)
+        
+        # Plot with fitted parameters
+        #fig = plot_flight_duration_distribution(df, stats, site_name)

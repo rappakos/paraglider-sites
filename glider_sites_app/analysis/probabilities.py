@@ -57,31 +57,58 @@ def gmm_cdf(x, means, stds, weights):
     return cdf
 
 
-def plot_flight_duration_distribution(df, site_name, output_path=None):
+def fit_site_duration_distribution(df, n_components=2):
+    """
+    Fit a Gaussian Mixture Model to flight durations for a site.
+    
+    Args:
+        df: DataFrame with 'FlightDuration' column
+        n_components: Number of Gaussian components (default: 2)
+    
+    Returns:
+        dict: Dictionary with GMM parameters (mu_i, sigma_i, weights) and statistics
+    """
+    # Calculate log durations
+    log_durations = np.log(df['FlightDuration'].values)
+    
+    # Fit GMM to log durations
+    gmm, stats = fit_gmm_to_log_durations(log_durations, n_components=n_components)
+    
+    # Add additional info
+    stats['n_flights'] = len(df)
+    stats['mu_1'] = stats['means'][0]
+    stats['mu_2'] = stats['means'][1]
+    stats['sigma_1'] = stats['stds'][0]
+    stats['sigma_2'] = stats['stds'][1]
+    stats['weight_1'] = stats['weights'][0]
+    stats['weight_2'] = stats['weights'][1]
+    
+    print(f"\n=== GMM Fitting Results ===")
+    print(f"Number of flights: {stats['n_flights']}")
+    print(f"Component 1: mu={stats['mu_1']:.3f}, sigma={stats['sigma_1']:.3f}, weight={stats['weight_1']:.3f}")
+    print(f"Component 2: mu={stats['mu_2']:.3f}, sigma={stats['sigma_2']:.3f}, weight={stats['weight_2']:.3f}")
+    print(f"BIC: {stats['bic']:.2f}, AIC: {stats['aic']:.2f}")
+    
+    return stats
+
+
+def plot_flight_duration_distribution(df, stats, site_name, output_path=None):
     """
     Plot flight duration distribution with GMM fit.
     
     Args:
         df: DataFrame with 'FlightDuration' column
+        stats: Dictionary with GMM statistics from fit_site_duration_distribution
         site_name: Name of the site for the plot title
         output_path: Optional path to save the plot (default: flight_durations_{site_name}.png)
     
     Returns:
         fig: Plotly figure object
-        stats: Dictionary with GMM statistics
     """
     # Sort flights by duration and create ordinal positions
     df_sorted = df.sort_values('FlightDuration').reset_index(drop=True)
     df_sorted['LogDuration'] = np.log(df_sorted['FlightDuration'])
     df_sorted['ordinal'] = np.arange(1, len(df_sorted) + 1) / len(df_sorted)
-    
-    # Fit GMM to log durations
-    gmm, stats = fit_gmm_to_log_durations(df_sorted['LogDuration'].values)
-    
-    print(f"\n=== GMM Results for {site_name} ===")
-    print(f"Component 1: mean={stats['means'][0]:.3f}, std={stats['stds'][0]:.3f}, weight={stats['weights'][0]:.3f}")
-    print(f"Component 2: mean={stats['means'][1]:.3f}, std={stats['stds'][1]:.3f}, weight={stats['weights'][1]:.3f}")
-    print(f"BIC: {stats['bic']:.2f}, AIC: {stats['aic']:.2f}")
     
     # Create x range for plotting curves
     x_range = np.linspace(df_sorted['LogDuration'].min(), df_sorted['LogDuration'].max(), 300)
@@ -132,7 +159,7 @@ def plot_flight_duration_distribution(df, site_name, output_path=None):
     fig.write_image(output_path)
     print(f"Plot saved to: {output_path}")
     
-    return fig, stats
+    return fig
 
 
 if __name__ == "__main__":

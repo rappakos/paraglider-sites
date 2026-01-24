@@ -150,6 +150,7 @@ async def load_all_flights(site_name: str):
 
 if __name__ == "__main__":
     import asyncio    
+    import json
     from dotenv import load_dotenv
     from glider_sites_app.analysis.probabilities import fit_site_duration_distribution, plot_flight_duration_distribution
 
@@ -161,12 +162,39 @@ if __name__ == "__main__":
     #asyncio.run(sync_xcontest_flights('Brunsberg'))
     #asyncio.run(xcontest_flight_count('Brunsberg'))
 
-    for site_name in ['Börry','Brunsberg','Rammelsberg NW','Rammelsberg SW','Porta']:
+    sites_gmm = {}
+    
+    for site_name in ['Börry','Brunsberg','Rammelsberg NW','Rammelsberg SW','Porta','Königszinne']:
         df = asyncio.run(load_all_flights(site_name))
         logger.info(f"\nTotal flights for site {site_name}: {len(df)}")
+        
+        if len(df) < 10:
+            logger.warning(f"Skipping {site_name} - not enough flights")
+            continue
         
         # Fit GMM
         stats = fit_site_duration_distribution(df)
         
+        # Store parameters
+        sites_gmm[site_name] = {
+            'mu_1': float(stats['mu_1']),
+            'mu_2': float(stats['mu_2']),
+            'sigma_1': float(stats['sigma_1']),
+            'sigma_2': float(stats['sigma_2']),
+            'weight_1': float(stats['weight_1']),
+            'weight_2': float(stats['weight_2']),
+            'n_flights': int(stats['n_flights']),
+            'bic': float(stats['bic']),
+            'aic': float(stats['aic'])
+        }
+        
         # Plot with fitted parameters
         #fig = plot_flight_duration_distribution(df, stats, site_name)
+    
+    # Save to JSON
+    output_path = 'flight_durations_gmm.json'
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(sites_gmm, f, indent=2, ensure_ascii=False)
+    
+    logger.info(f"\nSaved GMM parameters for {len(sites_gmm)} sites to {output_path}")
+

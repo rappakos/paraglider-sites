@@ -71,6 +71,8 @@ STATE_NAMES = {
     'Avg_Flight_Duration': ['A-Abgleiter', 'B-Soaring', 'C-Good', 'D-Epic']
 }
 
+DURATION_BIN_EDGES = [9, 45, 120]
+
 ESS = 50  # Equivalent Sample Size for Bayesian Estimation
 
 def discretize_data(df):
@@ -229,7 +231,7 @@ def discretize_data(df):
     if 'avg_flight_duration' in df.columns:
         data['Avg_Flight_Duration'] = pd.cut(
             df['avg_flight_duration'].fillna(0), # 0 if nobody flew
-            bins=[-np.inf, 9, 45, 120, np.inf], 
+            bins=[-np.inf] + DURATION_BIN_EDGES + [np.inf], 
             labels=STATE_NAMES['Avg_Flight_Duration']
         )
     else:

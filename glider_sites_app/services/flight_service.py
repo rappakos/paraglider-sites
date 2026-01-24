@@ -1,12 +1,13 @@
 # services/flight_service.py
 import logging
 import os
+import numpy as np
 import pandas as pd
 from glider_sites_app.repositories.sites_repository import get_stats
 from glider_sites_app.schemas import SiteBase
 from ..tools.flights.dhv_loader import refresh_flight_list
 from ..tools.flights.xcontest_loader import load_xcontest_flights
-from ..repositories.flights_repository import get_last_xcontest_flight_date, \
+from ..repositories.flights_repository import get_flights, get_last_xcontest_flight_date, \
         get_xcontest_flight_counts, load_flight_counts, pilot_stats, \
         save_dhv_flights, save_xcontest_flights
 
@@ -138,11 +139,20 @@ async def sync_xcontest_flights(site_name: str):
     flights_df['site_name'] = site_name
     await save_xcontest_flights(flights_df)
     
+async def load_all_flights(site_name: str):
+    """Load all flights for a given site from both DHV XC"""
+    df_dhv = await get_flights(site_name)
+
+    #logger.info(f"\nTotal flights for site {site_name}: {len(df_dhv)}")
+
+    return df_dhv
+
 
 if __name__ == "__main__":
     import asyncio    
     from dotenv import load_dotenv
-    
+    from glider_sites_app.analysis.probabilities import plot_flight_duration_distribution
+
     load_dotenv()    
     #asyncio.run(sync_dhv_flights('Porta'))
     #asyncio.run(load_flight_data('Porta'))
@@ -151,11 +161,17 @@ if __name__ == "__main__":
     #asyncio.run(sync_xcontest_flights('Brunsberg'))
     #asyncio.run(xcontest_flight_count('Brunsberg'))
 
-    site_name = 'Rammelsberg NW'
-    df = asyncio.run(load_flight_data(site_name))
-    percentiles = df['avg_flight_duration'].quantile([0.25, 0.5, 0.75, 0.9])
-    logger.info(f"\nFlight Duration Percentiles for {site_name}:")
-    logger.info(f"25th percentile: {percentiles[0.25]:.2f}")
-    logger.info(f"50th percentile (median): {percentiles[0.5]:.2f}")
-    logger.info(f"75th percentile: {percentiles[0.75]:.2f}")
-    logger.info(f"90th percentile: {percentiles[0.9]:.2f}")
+    site_name = 'Börry'
+    #df = asyncio.run(load_flight_data(site_name))
+    #percentiles = df['avg_flight_duration'].quantile([0.25, 0.5, 0.75, 0.9])
+    #logger.info(f"\nFlight Duration Percentiles for {site_name}:")
+    #logger.info(f"25th percentile: {percentiles[0.25]:.2f}")
+    #logger.info(f"50th percentile (median): {percentiles[0.5]:.2f}")
+    #logger.info(f"75th percentile: {percentiles[0.75]:.2f}")
+    #logger.info(f"90th percentile: {percentiles[0.9]:.2f}")
+
+    df = asyncio.run(load_all_flights(site_name))
+    logger.info(f"\nTotal flights for site {site_name}: {len(df)}")
+    
+    # Fit GMM and plot
+    fig, stats = plot_flight_duration_distribution(df, site_name)

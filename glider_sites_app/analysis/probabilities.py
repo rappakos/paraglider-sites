@@ -265,10 +265,11 @@ def plot_flight_duration_distribution(df, stats, site_name, output_path=None):
 
 if __name__ == "__main__":
     # Example: Fit weights based on bin probabilities
-    bin_edges = np.array([9, 45, 120])  # in minutes
-    target_probs = np.array([0.6, 0.1, 0.2, 0.1])  # probabilities for [0-9, 9-45, 45-120, 120+]
-    
-    site_name = 'Rammelsberg NW'
+    bin_edges = np.array([9, 25, 70, 120])  # in minutes
+    target_probs = np.array([0.73, 0.01, 0.11, 0.13,0.02])  # probabilities for [0-9, 9-45, 45-120, 120+]
+    assert(sum(target_probs) - 1.0 < 1e-6)
+
+    site_name = 'Brunsberg'
     
     # Load site parameters and fit weights
     result = load_site_params_and_fit_weights(site_name, bin_edges, target_probs)

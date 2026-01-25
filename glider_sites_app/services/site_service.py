@@ -2,9 +2,10 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta
+from glider_sites_app.analysis.probabilities import load_site_params_and_fit_weights
 from glider_sites_app.repositories.sites_repository import get_stats
 from glider_sites_app.analysis.model_loader import load_site_model, load_bayesian_model
-from glider_sites_app.analysis.bayes_network import predict_from_raw_weather
+from glider_sites_app.analysis.bayes_network import DURATION_BIN_EDGES, predict_from_raw_weather
 from glider_sites_app.services.weather_service import load_forecast_weather
 
 logging.basicConfig(level=logging.INFO)
@@ -43,6 +44,30 @@ async def get_site_data(site_name: str):
         result['has_model'] = False
 
     return result
+
+
+def estimate_flight_times(site_name, row):
+    """Estimate expected flight time based on probabilities"""
+
+    if row.get('is_flyable',False) == False:
+        # shortcut
+        return 0.
+
+
+    edges = DURATION_BIN_EDGES
+    probs = [
+        row.get('sleddie_prob', 0),
+        row.get('establishing_prob', 0),
+        row.get('soaring_prob', 0),
+        row.get('extended_prob', 0),
+        row.get('epic_prob', 0)
+    ]
+    res = load_site_params_and_fit_weights(site_name,edges, probs)
+
+    logger.info(f"Estimated flight time params for site {site_name}  is {res}")
+
+    return 0.
+
 
 async def get_forecast_data(site_name: str, start_date: str = '2025-06-01', end_date: str = '2025-06-07'):
     """Helper function to get forecast data for a site with caching"""
@@ -97,6 +122,9 @@ async def get_forecast_data(site_name: str, start_date: str = '2025-06-01', end_
         #     )[1] if row['is_flyable_prob'] > 0.5 else 'Sled',
         #     axis=1
         # )
+
+        weather_df['expected_flight_time'] = bayesian_predictions.apply(lambda row: estimate_flight_times(site_name, row), axis=1)
+
         weather_df['sleddie_prob'] = bayesian_predictions['sleddie_prob']
         weather_df['establishing_prob'] = bayesian_predictions['establishing_prob']
         weather_df['soaring_prob'] = bayesian_predictions['soaring_prob']

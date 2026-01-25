@@ -57,6 +57,107 @@ def gmm_cdf(x, means, stds, weights):
     return cdf
 
 
+def fit_weights_from_bins(mu_1, mu_2, sigma_1, sigma_2, bin_edges, target_probs):
+    """
+    Fit GMM weights given fixed means and stds, based on target bin probabilities.
+    
+    Args:
+        mu_1, mu_2: Fixed means in log-space
+        sigma_1, sigma_2: Fixed standard deviations in log-space
+        bin_edges: Array of bin edges in minutes (will be converted to log seconds)
+        target_probs: Array of target probabilities for each bin
+    
+    Returns:
+        tuple: (weight_1, weight_2) fitted weights
+    """
+    # Convert bin edges from minutes to log(seconds)
+    log_bin_edges = np.log(bin_edges * 60)
+    
+    def objective(weight_1):
+        # weight_2 = 1 - weight_1
+        weight_2 = 1 - weight_1
+        
+        # Ensure weight is valid
+        if weight_1 <= 0 or weight_1 >= 1:
+            return 1e10
+        
+        weights = np.array([weight_1, weight_2])
+        means = np.array([mu_1, mu_2])
+        stds = np.array([sigma_1, sigma_2])
+        
+        # Calculate CDF at bin edges
+        cdf_values = gmm_cdf(log_bin_edges, means, stds, weights)
+        
+        # Calculate model probabilities for each bin
+        model_probs = np.diff(np.insert(cdf_values, 0, 0))
+        # Handle the last tail (last bin to infinity)
+        model_probs = np.append(model_probs, 1 - cdf_values[-1])
+        
+        # Minimize MSE
+        return np.sum((model_probs - target_probs)**2)
+    
+    # Optimize weight_1
+    from scipy.optimize import minimize_scalar
+    res = minimize_scalar(objective, bounds=(0.001, 0.999), method='bounded')
+    weight_1 = res.x
+    weight_2 = 1 - weight_1
+    
+    return weight_1, weight_2
+
+
+def load_site_params_and_fit_weights(site_name, bin_edges, target_probs, json_path='flight_durations_gmm.json'):
+    """
+    Load GMM parameters for a site from JSON and fit weights based on target bin probabilities.
+    
+    Args:
+        site_name: Name of the site
+        bin_edges: Array of bin edges in minutes
+        target_probs: Array of target probabilities for each bin
+        json_path: Path to the JSON file with GMM parameters
+    
+    Returns:
+        dict: Dictionary with all parameters including fitted weights
+    """
+    import json
+    
+    # Load parameters from JSON
+    with open(json_path, 'r', encoding='utf-8') as f:
+        sites_gmm = json.load(f)
+    
+    if site_name not in sites_gmm:
+        raise ValueError(f"Site '{site_name}' not found in {json_path}")
+    
+    params = sites_gmm[site_name]
+    
+    # Extract mu and sigma (these are already in log-space)
+    mu_1 = params['mu_1']
+    mu_2 = params['mu_2']
+    sigma_1 = params['sigma_1']
+    sigma_2 = params['sigma_2']
+    
+    # Fit weights based on bins
+    weight_1, weight_2 = fit_weights_from_bins(mu_1, mu_2, sigma_1, sigma_2, bin_edges, target_probs)
+    
+    result = {
+        'mu_1': mu_1,
+        'mu_2': mu_2,
+        'sigma_1': sigma_1,
+        'sigma_2': sigma_2,
+        'weight_1': weight_1,
+        'weight_2': weight_2,
+        'weight_1_original': params['weight_1'],
+        'weight_2_original': params['weight_2'],
+        'n_flights': params['n_flights']
+    }
+    
+    print(f"\n=== Fitted Weights for {site_name} ===")
+    print(f"Original weights: w1={params['weight_1']:.3f}, w2={params['weight_2']:.3f}")
+    print(f"Fitted weights:   w1={weight_1:.3f}, w2={weight_2:.3f}")
+    print(f"Using mu1={mu_1:.3f}, sigma1={sigma_1:.3f}, mu2={mu_2:.3f}, sigma2={sigma_2:.3f}")
+    
+    return result
+
+
 def fit_site_duration_distribution(df, n_components=2):
     """
     Fit a Gaussian Mixture Model to flight durations for a site.
@@ -163,13 +264,26 @@ def plot_flight_duration_distribution(df, stats, site_name, output_path=None):
 
 
 if __name__ == "__main__":
-    # Calculate Expected Value (Mean of Log-Normal)
-    bin_edges = np.array([9, 45, 120])
-    target_probs_list = np.array([
-        #[0.93,0.01,0.05,0.01],
-        [0.84,0.13,0.02,0.01],
-        [0.6, 0.2, 0.1, 0.1],        
-        [0.35,0.25,0.25,0.15],
-        [0.73, 0.02, 0.22,0.03]
-        ])  # Example probabilities for the bins
+    # Example: Fit weights based on bin probabilities
+    bin_edges = np.array([9, 45, 120])  # in minutes
+    target_probs = np.array([0.6, 0.1, 0.2, 0.1])  # probabilities for [0-9, 9-45, 45-120, 120+]
+    
+    site_name = 'Rammelsberg NW'
+    
+    # Load site parameters and fit weights
+    result = load_site_params_and_fit_weights(site_name, bin_edges, target_probs)
+    
+    # Verify the fit by calculating resulting probabilities
+    means = np.array([result['mu_1'], result['mu_2']])
+    stds = np.array([result['sigma_1'], result['sigma_2']])
+    weights = np.array([result['weight_1'], result['weight_2']])
+    
+    log_bin_edges = np.log(bin_edges * 60)
+    cdf_values = gmm_cdf(log_bin_edges, means, stds, weights)
+    model_probs = np.diff(np.insert(cdf_values, 0, 0))
+    model_probs = np.append(model_probs, 1 - cdf_values[-1])
+    
+    print(f"\nTarget probabilities: {target_probs}")
+    print(f"Model probabilities:  {model_probs}")
+    print(f"Error: {np.sum((model_probs - target_probs)**2):.6f}")
 

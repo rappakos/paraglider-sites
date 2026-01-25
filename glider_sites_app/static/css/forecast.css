@@ -126,7 +126,8 @@
 .bar-veryshort { background-color: #ef5350; }
 .bar-short { background-color: #ffa726; }
 .bar-medium { background-color: #66bb6a; }
-.bar-long { background-color: #42a5f5; }
+.bar-extended { background-color: #42a5f5; }
+.bar-long { background-color: #5e35b1; }
 
 /* Mobile optimizations */
 @media screen and (max-width: 768px) {

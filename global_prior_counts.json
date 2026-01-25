@@ -54,10 +54,11 @@
     "High": 840
   },
   "Avg_Flight_Duration": {
-    "A-Abgleiter": 6521,
-    "C-Good": 273,
-    "D-Epic": 229,
-    "B-Soaring": 213
+    "A-Sleddie": 6521,
+    "D-Extended": 262,
+    "C-Soaring": 209,
+    "E-Epic": 146,
+    "B-Establishing": 98
   },
   "XC_Result": {
     "A-Sled": 6597,

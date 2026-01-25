@@ -68,10 +68,11 @@ STATE_NAMES = {
     'RF_Flyability_Confidence': ['Low', 'Medium', 'High'],
     'Is_Flyable':       ['No', 'Yes'],
     'XC_Result':        ['A-Sled', 'B-Local', 'C-XC', 'D-Hammer'],
-    'Avg_Flight_Duration': ['A-Abgleiter', 'B-Soaring', 'C-Good', 'D-Epic']
+    'Avg_Flight_Duration': ['A-Sleddie', 'B-Establishing', 'C-Soaring', 'D-Extended', 'E-Epic']
 }
 
-DURATION_BIN_EDGES = [9, 45, 120]
+DURATION_BIN_EDGES = [9, 25, 70, 150]
+assert(len(STATE_NAMES['Avg_Flight_Duration']) == len(DURATION_BIN_EDGES) + 1)
 
 ESS = 50  # Equivalent Sample Size for Bayesian Estimation
 
@@ -235,7 +236,7 @@ def discretize_data(df):
             labels=STATE_NAMES['Avg_Flight_Duration']
         )
     else:
-        data['Avg_Flight_Duration'] = 'A-Abgleiter'  # Placeholder
+        data['Avg_Flight_Duration'] = 'A-Sleddie'  # Placeholder
 
     return data.dropna() # BNs hate NaNs
 
@@ -429,10 +430,11 @@ def predict_from_raw_weather(model, raw_weather_df):
                 'date': raw_weather_df.iloc[idx].get('date', idx),
                 'is_flyable_prob': flyable_prob,
                 'predicted_flyable': 'Yes' if flyable_prob > 0.5 else 'No',
-                'abgleiter': airtime_values[airtime_states.index('A-Abgleiter')] if 'A-Abgleiter' in airtime_states else 0,
-                '9min_prob': airtime_values[airtime_states.index('B-Soaring')] if 'B-Soaring' in airtime_states else 0,
-                '45min_prob': airtime_values[airtime_states.index('C-Good')] if 'C-Good' in airtime_states else 0,
-                '120min_prob': airtime_values[airtime_states.index('D-Epic')] if 'D-Epic' in airtime_states else 0
+                'sleddie_prob': airtime_values[airtime_states.index('A-Sleddie')] if 'A-Sleddie' in airtime_states else 0,
+                'establishing_prob': airtime_values[airtime_states.index('B-Establishing')] if 'B-Establishing' in airtime_states else 0,
+                'soaring_prob': airtime_values[airtime_states.index('C-Soaring')] if 'C-Soaring' in airtime_states else 0,
+                'extended_prob': airtime_values[airtime_states.index('D-Extended')] if 'D-Extended' in airtime_states else 0,
+                'epic_prob': airtime_values[airtime_states.index('E-Epic')] if 'E-Epic' in airtime_states else 0
             })
 
         except Exception as e:

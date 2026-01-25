@@ -113,7 +113,7 @@
                                     
                                     <!-- Airtime Distribution -->
                                     <div class="airtime-section">
-                                        <div class="duration-label">Flight Duration</div>
+                                        <div class="duration-label">Flight Duration (min) </div>
                                         {% set sleddie_prob = (day.get('sleddie_prob', 0) * 100)|round(0)|int %}
                                         {% set establishing_prob = (day.get('establishing_prob', 0) * 100)|round(0)|int %}
                                         {% set soaring_prob = (day.get('soaring_prob', 0) * 100)|round(0)|int %}
@@ -126,7 +126,7 @@
                                                 <div class="airtime-icon">⚡</div>
                                                 <div class="airtime-bar-visual bar-veryshort" style="height: {{ sleddie_prob }}%;" title="<9 minutes"></div>
                                                 <div class="airtime-percent">{{ sleddie_prob }}%</div>
-                                                <div class="airtime-label">&lt;9m</div>
+                                                <div class="airtime-label">&lt;9</div>
                                             </div>
                                             
                                             <!-- 9-25 min -->
@@ -134,7 +134,7 @@
                                                 <div class="airtime-icon">🪂</div>
                                                 <div class="airtime-bar-visual bar-short" style="height: {{ establishing_prob }}%;" title="9-25 minutes"></div>
                                                 <div class="airtime-percent">{{ establishing_prob }}%</div>
-                                                <div class="airtime-label">9-25m</div>
+                                                <div class="airtime-label">9-25</div>
                                             </div>
                                             
                                             <!-- 25-70 min -->
@@ -142,7 +142,7 @@
                                                 <div class="airtime-icon">🦅</div>
                                                 <div class="airtime-bar-visual bar-medium" style="height: {{ soaring_prob }}%;" title="25-70 minutes"></div>
                                                 <div class="airtime-percent">{{ soaring_prob }}%</div>
-                                                <div class="airtime-label">25-70m</div>
+                                                <div class="airtime-label">25-70</div>
                                             </div>
                                             
                                             <!-- 70-150 min -->
@@ -150,7 +150,7 @@
                                                 <div class="airtime-icon">🦅</div>
                                                 <div class="airtime-bar-visual bar-extended" style="height: {{ extended_prob }}%;" title="70-150 minutes"></div>
                                                 <div class="airtime-percent">{{ extended_prob }}%</div>
-                                                <div class="airtime-label">70-150m</div>
+                                                <div class="airtime-label">70-150</div>
                                             </div>
                                             
                                             <!-- >150 min -->
@@ -158,7 +158,7 @@
                                                 <div class="airtime-icon">🚀</div>
                                                 <div class="airtime-bar-visual bar-long" style="height: {{ epic_prob }}%;" title=">150 minutes"></div>
                                                 <div class="airtime-percent">{{ epic_prob }}%</div>
-                                                <div class="airtime-label">&gt;150m</div>
+                                                <div class="airtime-label">&gt;150</div>
                                             </div>
                                         </div>
                                     </div>

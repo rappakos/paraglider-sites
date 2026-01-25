@@ -751,19 +751,23 @@ async def export_graph(output_file: str = 'bayesian_network_graph.png'):
         logger.error(f"Failed to export graph: {e}")
 
 
+async def retrain_all_site_models():
+    """
+    Retrain and save Bayesian models for all sites.
+    """
+
+    await get_global_prior_counts(recalculate=True)
+
+    for site_name in ['Rammelsberg NW', 'Königszinne', 'Börry', 'Porta', 'Brunsberg']:
+        logger.info(f"Retraining model for site: {site_name}")
+        await flight_predictor(site_name, save_model=True)
+
+
 if __name__ == '__main__':
     import asyncio
     
-    # Set up global counts
-    #asyncio.run(get_global_prior_counts(recalculate=True))
-
-    # Train and save model
-    save=False
-    #asyncio.run(flight_predictor('Rammelsberg NW', save_model=save))
-    #asyncio.run(flight_predictor('Königszinne', save_model=save))
-    #asyncio.run(flight_predictor('Börry', save_model=save))
-    #asyncio.run(flight_predictor('Porta', save_model=save))
-    #asyncio.run(flight_predictor('Brunsberg', save_model=save))
+    # Set up global counts & models
+    asyncio.run(retrain_all_site_models())
 
     p = {
         'A': 12957,
@@ -772,4 +776,4 @@ if __name__ == '__main__':
     
     #asyncio.run(personal_predictor(FKPilotID=p['A']))
 
-    asyncio.run(export_graph())
+    #asyncio.run(export_graph())

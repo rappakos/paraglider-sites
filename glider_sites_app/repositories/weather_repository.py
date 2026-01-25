@@ -76,3 +76,58 @@ async def save_weather_data(df_weather: DataFrame):
     async with aiosqlite.connect(DB_NAME) as db:
         await db.executemany(sql, df_to_save.values.tolist())
         await db.commit()
+
+
+async def save_daily_forecast_data(site_name: str, forecast_df: DataFrame, forecast_date: str):
+    """
+    Save aggregated daily forecast data with forecast_date tracking
+    
+    Args:
+        site_name: Name of the site
+        forecast_df: DataFrame with aggregated daily weather data (from aggregate_weather)
+        forecast_date: Date when the forecast was generated (YYYY-MM-DD)
+    """
+    if forecast_df.empty:
+        return
+    
+    # Add forecast metadata
+    forecast_df['site_name'] = site_name
+    forecast_df['forecast_date'] = forecast_date
+    
+    # Convert date column to string format
+    forecast_df['target_date'] = forecast_df['date'].dt.strftime('%Y-%m-%d')
+    
+    # Select and order columns for insertion
+    columns = [
+        'site_name', 
+        'forecast_date', 
+        'target_date',
+        'avg_wind_speed',
+        'min_wind_speed',
+        'max_wind_gust',
+        'avg_wind_alignment',
+        'total_precipitation',
+        'total_sunshine',
+        'avg_cloud_cover',
+        'wind_speed_850hPa',
+        'max_boundary_layer_height',
+        'max_lapse_rate',
+        'day_of_week',
+        'is_weekend'
+    ]
+    
+    insert_df = forecast_df[columns]    
+   
+    async with aiosqlite.connect(DB_NAME) as db:
+        placeholders = ','.join(['?' for _ in columns])
+        insert_query = f"""
+        INSERT OR REPLACE INTO weather_forecasts 
+        ({','.join(columns)}) 
+        VALUES ({placeholders})
+        """
+        
+        records = insert_df.to_records(index=False)
+        await db.executemany(insert_query, records)
+        await db.commit()
+
+

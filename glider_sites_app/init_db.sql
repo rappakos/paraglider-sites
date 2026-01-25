@@ -119,3 +119,24 @@ CREATE INDEX IF NOT EXISTS idx_xcontest_flights_pilot_id ON xcontest_flights(pil
 
 
 UPDATE xcontest_flights SET site_name = 'Rammelsberg SW' WHERE site_name = 'Rammelsberg NW'  and flight_date = '2020-11-05';
+
+
+CREATE TABLE IF NOT EXISTS weather_forecasts (
+        site_name TEXT NOT NULL,
+        forecast_date TEXT NOT NULL,
+        target_date TEXT NOT NULL,
+        avg_wind_speed REAL,
+        min_wind_speed REAL,
+        max_wind_gust REAL,
+        avg_wind_alignment REAL,
+        total_precipitation REAL,
+        total_sunshine REAL,
+        avg_cloud_cover REAL,
+        wind_speed_850hPa REAL,
+        max_boundary_layer_height REAL,
+        max_lapse_rate REAL,
+        day_of_week INTEGER,
+        is_weekend INTEGER,
+        PRIMARY KEY (site_name, forecast_date, target_date),
+        FOREIGN KEY(site_name) REFERENCES sites(site_name)
+);

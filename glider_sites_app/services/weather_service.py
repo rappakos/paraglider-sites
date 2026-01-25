@@ -127,7 +127,7 @@ async def load_forecast_weather(site_name:str, start_date:str, end_date:str) -> 
         lat, lng, elev = site_info.iloc[0]['geo_latitude'], site_info.iloc[0]['geo_longitude'], site_info.iloc[0]['elevation']        
         raw_weather_df = await load_new_forecast_data(lat, lng, elev)
         raw_weather_df['site_name'] = site_name
-        logger.info(raw_weather_df.head())
+        logger.debug(raw_weather_df.head())
     else:
         raw_weather_df = await load_weather_data(site_name)
         filter = (raw_weather_df['date'] >= start_date) & (raw_weather_df['date'] <= end_date)

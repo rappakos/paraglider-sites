@@ -1,7 +1,11 @@
 {# _menu.html #}
 
 <nav class="w3-bar w3-black">
-  <a href="{{ url_for('index') }}" class="w3-button w3-round-large">Home</a>
+  {% set root_path = request.app.state.config.ROOT_PATH if request.app.state.config is defined and request.app.state.config.ROOT_PATH else '' %}
+  {% if root_path %}
+  <a href="{{ root_path }}" class="w3-button w3-round-large"><i class="fa fa-home"></i></a>
+  {% endif %}
+  <a href="{{ url_for('index') }}" class="w3-button w3-round-large">Overview</a>
   <a href="{{ url_for('forecast_page') }}" class="w3-button w3-round-large">Forecast</a>
   <!-- <a href="{{ request.scope.get('root_path', '') }}/docs" class="w3-button w3-round-large">API</a> -->
   <a href="https://github.com/rappakos/paraglider-sites/blob/main/BACKGROUND.md" class="w3-button w3-round-large">Background</a>

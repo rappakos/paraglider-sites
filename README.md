@@ -5,12 +5,12 @@ Connect paragliding flights and weather data
 
 More about the methodology in the [Background](./BACKGROUND.md)
 
-## 🚀 FastAPI Version Available!
+## Features
 
-This project has been migrated to **FastAPI** with added machine learning capabilities:
+This project uses **FastAPI** with machine learning capabilities:
 - Random Forest models for classification and regression
 - Bayesian Networks for probabilistic inference
-- OpenAPI/Swagger documentation
+- OpenAPI/Swagger documentation at `/docs`
 - Modern async API design
 
 
@@ -32,42 +32,57 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
-4. **Configure environment**
-Create a `.env` file with:
-```
-PORT=3979
-```
-
-5. **Running the applicaton**
+4. **Run the application**
 
 ```powershell
 uvicorn app:app --reload --host localhost --port 3979
 ```
 
+The app will be available at `http://localhost:3979` with API docs at `http://localhost:3979/docs`
 
-## DB
 
-Execute as module to init: `py -m glider_sites_app.db`
+## Database
 
-Complete reset by `rm glider_sites_app.db`
+Initialize the database (creates `glider_sites_app.db` in the repository root):
+```powershell
+python -m glider_sites_app.db
+```
+
+To reset the database:
+```powershell
+rm glider_sites_app.db
+python -m glider_sites_app.db
+```
 
 ## Tools
 
 ### dhv_loader
 
-Execute as a module `python -m glider_sites_app.tools.flights.dhv_loader`, sample used for Rammi NW
+Load flight data (sample used for Rammi NW):
+```powershell
+python -m glider_sites_app.tools.flights.dhv_loader
+```
 
 ### openmeteo_loader
 
-Execute as a module `py -m glider_sites_app.tools.weather.openmeteo_loader`, sample used for Rammi
+Load weather data (sample used for Rammi):
+```powershell
+python -m glider_sites_app.tools.weather.openmeteo_loader
+```
 
 
 ## Analysis
 
 ### Random forest
 
-Run with `py -m glider_sites_app.analysis.random_forest`
+Run classification and regression models:
+```powershell
+python -m glider_sites_app.analysis.random_forest
+```
 
 ### Bayes network
 
-Run with `py -m glider_sites_app.analysis.bayes_network`
+Run probabilistic inference:
+```powershell
+python -m glider_sites_app.analysis.bayes_network
+```

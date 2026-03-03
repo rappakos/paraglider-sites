@@ -224,9 +224,12 @@ async def fix_temp_850hpa_pre2020():
 if __name__=='__main__':
     import asyncio
     import plotly.express as px
-    #asyncio.run(sync_weather('Porta'))
+    
+    site_name = 'Dielmissen'
+    asyncio.run(sync_weather(site_name))
+    
     #asyncio.run(sync_weather('Brunsberg'))
-    site_name = 'Börry'
+    
     #weather = asyncio.run(load_agg_weather_data(site_name))
     #weather['gust_factor'] = weather.apply(lambda row: gust_factor(row['avg_wind_speed'], row['max_wind_gust']), axis=1)
 
@@ -247,4 +250,4 @@ if __name__=='__main__':
     #)
     #print(turbulence.value_counts())
 
-    asyncio.run(fix_temp_850hpa_pre2020())  
+    #asyncio.run(fix_temp_850hpa_pre2020())  

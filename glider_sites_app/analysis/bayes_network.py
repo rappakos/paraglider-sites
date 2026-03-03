@@ -760,7 +760,7 @@ async def retrain_all_site_models():
 
     await get_global_prior_counts(recalculate=True)
 
-    for site_name in ['Rammelsberg NW', 'Königszinne', 'Börry', 'Porta', 'Brunsberg']:
+    for site_name in ['Rammelsberg NW', 'Königszinne', 'Börry', 'Porta', 'Brunsberg','Dielmissen']:
         logger.info(f"Retraining model for site: {site_name}")
         await flight_predictor(site_name, save_model=True)
 

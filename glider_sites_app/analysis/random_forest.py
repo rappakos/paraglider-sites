@@ -99,8 +99,9 @@ async def train_flight_predictor(site_name: str,
 if __name__ == '__main__':
     import asyncio
     do_save=True
-    asyncio.run(train_flight_predictor('Königszinne', 'classifier', save=do_save))
-    asyncio.run(train_flight_predictor('Rammelsberg NW', 'classifier', save=do_save))
-    asyncio.run(train_flight_predictor('Börry', 'classifier', save=do_save))
-    asyncio.run(train_flight_predictor('Porta', 'classifier', save=do_save))
-    asyncio.run(train_flight_predictor('Brunsberg', 'classifier', save=do_save))
+    #asyncio.run(train_flight_predictor('Königszinne', 'classifier', save=do_save))
+    #asyncio.run(train_flight_predictor('Rammelsberg NW', 'classifier', save=do_save))
+    #asyncio.run(train_flight_predictor('Börry', 'classifier', save=do_save))
+    #asyncio.run(train_flight_predictor('Porta', 'classifier', save=do_save))
+    #asyncio.run(train_flight_predictor('Brunsberg', 'classifier', save=do_save))
+    asyncio.run(train_flight_predictor('Dielmissen', 'classifier', save=do_save))

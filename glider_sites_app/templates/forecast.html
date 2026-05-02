@@ -6,10 +6,106 @@
 <link rel="stylesheet" href="{{ url_for('static', path='css/forecast.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/datepicker.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/forecast_headers.css') }}">
+<style>
+    /* Floating Button */
+    .legend-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        background-color: #007bff;
+        color: white;
+        border-radius: 50%;
+        border: none;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        z-index: 1000;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+    }
 
+    /* Modal Background */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+        z-index: 2000;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* Modal Box */
+    .modal-content {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 400px;
+        position: relative;
+        color: #333;
+    }
+
+    .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        font-size: 28px;
+        border: none;
+        background: none;
+        cursor: pointer;
+    }
+
+    .legend-section { margin-bottom: 20px; }
+    .legend-section h4 { margin-bottom: 8px; color: #555; }
+    .legend-list { list-style: none; padding: 0; }
+    .legend-list li { margin-bottom: 10px; display: flex; align-items: center; }
+    .legend-list span { font-size: 20px; margin-right: 15px; width: 30px; text-align: center; }
+</style>
 {% endblock %}
 
 {% block content %}
+<!-- Floating Info Button -->
+<button id="legend-trigger" class="legend-btn" aria-label="Show Legend">
+    <span class="icon">?</span>
+</button>
+
+<!-- Legend Modal Overlay -->
+<div id="legend-modal" class="modal-overlay">
+    <div class="modal-content">
+        <button id="legend-close" class="close-btn">&times;</button>
+        <h3>Forecast Legend</h3>
+        <hr>
+        
+        <div class="legend-section">
+            <h4>Models</h4>
+            <p><strong>RF:</strong> Random Forest Model prediction.</p>
+            <p><strong>BN:</strong> Bayesian Network Model prediction.</p>
+        </div>
+        <div class="legend-section">
+            <h4>Output</h4>
+            <p><strong>✓</strong> = Flyable (confidence as %)</p>
+            <p><strong>✗</strong> = Not Flyable (confidence as %)</p>
+        </div>
+        <div class="legend-section">
+            <h4>Flight Durations</h4>
+            <ul class="legend-list">
+                <li><span>⚡</span> <strong>Sleddie:&NonBreakingSpace;</strong> < 9 mins</li>
+                <li><span>🪂</span> <strong>Establishing:&NonBreakingSpace;</strong> 9 - 25 mins</li>
+                <li><span>🦆</span> <strong>Soaring:&NonBreakingSpace;</strong> 25 - 70 mins</li>
+                <li><span>🦅</span> <strong>Extended:&NonBreakingSpace;</strong> 70 - 150 mins</li>
+                <li><span>🚀</span> <strong>Epic:&NonBreakingSpace;</strong> > 150 mins</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+
 <div class="w3-container w3-margin-bottom">
     <form method="GET" action="{{ url_for('forecast_page') }}" id="forecast-form">
         <div class="date-picker-container">
@@ -174,4 +270,29 @@
     </tbody>
 </table>
 </div>
+<script>
+    const modal = document.getElementById('legend-modal');
+    const btn = document.getElementById('legend-trigger');
+    const close = document.getElementById('legend-close');
+
+    // Open modal
+    btn.onclick = function() {
+        modal.style.display = "flex";
+        document.body.style.overflow = "hidden"; // Prevent background scroll
+    }
+
+    // Close modal
+    close.onclick = function() {
+        modal.style.display = "none";
+        document.body.style.overflow = "auto";
+    }
+
+    // Close if user clicks outside the box
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+            document.body.style.overflow = "auto";
+        }
+    }
+</script>
 {% endblock %}

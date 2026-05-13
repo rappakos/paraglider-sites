@@ -10,7 +10,7 @@ from ..tools.flights.xcontest_loader import load_xcontest_flights
 from ..repositories.flights_repository import get_flights, get_last_xcontest_flight_date, \
         get_xcontest_flight_counts, load_flight_counts, pilot_stats, \
         save_dhv_flights, save_xcontest_flights
-
+from glider_sites_app.analysis.probabilities import fit_site_duration_distribution, plot_flight_duration_distribution
 
 
 MIN_DATE = '2018-01-01'
@@ -148,24 +148,11 @@ async def load_all_flights(site_name: str):
     return df_dhv
 
 
-if __name__ == "__main__":
-    import asyncio    
-    import json
-    from dotenv import load_dotenv
-    from glider_sites_app.analysis.probabilities import fit_site_duration_distribution, plot_flight_duration_distribution
-
-    load_dotenv()    
-    #asyncio.run(sync_dhv_flights('Porta'))
-    #asyncio.run(load_flight_data('Porta'))
-    #asyncio.run(sync_dhv_flights('Brunsberg'))
-    #asyncio.run(sync_xcontest_flights('Rammelsberg NW'))
-    #asyncio.run(sync_xcontest_flights('Brunsberg'))
-    #asyncio.run(xcontest_flight_count('Brunsberg'))
-
+async def calculate_duration_gmm():
     sites_gmm = {}
     
-    for site_name in ['Börry','Brunsberg','Rammelsberg NW','Rammelsberg SW','Porta','Königszinne']:
-        df = asyncio.run(load_all_flights(site_name))
+    for site_name in ['Börry','Brunsberg','Rammelsberg NW','Rammelsberg SW','Porta','Königszinne','Dielmissen']:
+        df = await load_all_flights(site_name)
         logger.info(f"\nTotal flights for site {site_name}: {len(df)}")
         
         if len(df) < 10:
@@ -196,5 +183,25 @@ if __name__ == "__main__":
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(sites_gmm, f, indent=2, ensure_ascii=False)
     
-    logger.info(f"\nSaved GMM parameters for {len(sites_gmm)} sites to {output_path}")
+    logger.info(f"\nSaved GMM parameters for {len(sites_gmm)} sites to {output_path}")    
+
+if __name__ == "__main__":
+    import asyncio    
+    import json
+    from dotenv import load_dotenv
+
+
+    load_dotenv()    
+    #asyncio.run(sync_dhv_flights('Porta'))
+    #asyncio.run(load_flight_data('Porta'))
+    #asyncio.run(sync_dhv_flights('Brunsberg'))
+    #asyncio.run(sync_xcontest_flights('Rammelsberg NW'))
+    #asyncio.run(sync_xcontest_flights('Brunsberg'))
+    #asyncio.run(xcontest_flight_count('Brunsberg'))
+    #asyncio.run(sync_xcontest_flights('Dielmissen'))    
+    #x=asyncio.run(load_flight_data('Dielmissen'))
+    #print(x.tail())
+    asyncio.run(calculate_duration_gmm())
+
+
 

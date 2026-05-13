@@ -9,7 +9,7 @@ from typing import List, Optional
 from .schemas import (
     SiteStats
 )
-from .services.site_service import get_site_data, get_all_sites, get_forecast_data
+from .services.site_service import get_site_data, get_all_sites, get_forecast_data, get_direction_stats
 
 PROJECT_ROOT = pathlib.Path(__file__).parent
 # Setup Jinja2 templates
@@ -101,10 +101,11 @@ async def site_details(request: Request, site_name: str):
     data = await get_site_data(site_name)
     if not data:
         raise HTTPException(status_code=404, detail="Site not found")
-    # Add flights data if needed
+    direction_stats = await get_direction_stats(site_name)
     return templates.TemplateResponse(request, "site.html", {
         "name": site_name,
-        "data": [data]
+        "data": [data],
+        "direction_stats": direction_stats,
     })
 
 

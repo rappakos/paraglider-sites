@@ -1,6 +1,75 @@
 {% extends "base.html" %}
 
 {% set title = name %}
+
+{% block extra_css %}
+<style>
+  .dir-histogram {
+    margin-top: 1.5em;
+  }
+  .dir-histogram h3 {
+    margin-bottom: 0.5em;
+  }
+  .dir-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 130px;
+    padding-bottom: 2px;
+  }
+  .dir-bar-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+  }
+  .dir-bar-stack {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: stretch;
+    width: 100%;
+  }
+  .dir-bar-baseline {
+    background-color: #4a90d9;
+    width: 100%;
+    min-height: 1px;
+  }
+  .dir-bar-overlay {
+    background-color: rgba(76, 175, 80, 0.85);
+    width: 100%;
+    min-height: 1px;
+  }
+  .dir-label {
+    font-size: 0.6em;
+    margin-top: 3px;
+    color: #555;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .dir-count {
+    font-size: 0.55em;
+    color: #888;
+    text-align: center;
+  }
+  .dir-legend {
+    display: flex;
+    gap: 1.2em;
+    margin-top: 0.6em;
+    font-size: 0.8em;
+  }
+  .dir-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .dir-legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
     <div>DHV ID: {{data[0].dhv_site_id}}</div>
     <div>Coords: {{data[0].geo_latitude|round(5)}}, {{data[0].geo_longitude|round(5)}}</div>
@@ -13,6 +82,67 @@
             <div>{{item.feature}}: {{(item.importance*100)|round(2)}}%</div>
         {% endfor %}
     {% endif %}
+
+    {# Direction statistics histogram #}
+    <div class="dir-histogram">
+      <h3>Wind direction statistics</h3>
+      {% if direction_stats %}
+        {# Compute the max bar value for proportional scaling #}
+        {% set max_count = namespace(val=1) %}
+        {% for i in range(16) %}
+          {% if direction_stats.baseline[i] > max_count.val %}
+            {% set max_count.val = direction_stats.baseline[i] %}
+          {% endif %}
+        {% endfor %}
+
+        <div class="dir-bars">
+          {% for i in range(16) %}
+            {% set b = direction_stats.baseline[i] %}
+            {% set b_px = (b / max_count.val * 110) | int %}
+            {% if direction_stats.rf_overlay %}
+              {% set o = direction_stats.rf_overlay[i] %}
+              {% set o_px = (o / max_count.val * 110) | int %}
+              {% set b_only_px = b_px - o_px %}
+            {% else %}
+              {% set o = 0 %}
+              {% set o_px = 0 %}
+              {% set b_only_px = b_px %}
+            {% endif %}
+            <div class="dir-bar-wrap">
+              <div class="dir-count">{{b}}</div>
+              <div class="dir-bar-stack" style="height:{{b_px}}px;">
+                {% if direction_stats.rf_overlay and o_px > 0 %}
+                  <div class="dir-bar-overlay" style="height:{{o_px}}px;"></div>
+                {% endif %}
+                {% if b_only_px > 0 %}
+                  <div class="dir-bar-baseline" style="height:{{b_only_px}}px;"></div>
+                {% endif %}
+              </div>
+              <div class="dir-label">{{direction_stats.buckets[i]}}</div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <div class="dir-legend">
+          <div class="dir-legend-item">
+            <div class="dir-legend-swatch" style="background:#4a90d9;"></div>
+            <span>Historical days ({{direction_stats.total_days}} total, wind 4–40 km/h)</span>
+          </div>
+          {% if direction_stats.rf_overlay %}
+          <div class="dir-legend-item">
+            <div class="dir-legend-swatch" style="background:rgba(76,175,80,0.85);"></div>
+            <span>RF predicted flyable at alignment 0.9 ({{direction_stats.rf_overlay_days}} days)</span>
+          </div>
+          {% else %}
+          <div class="dir-legend-item" style="color:#999;">
+            <span>RF overlay not available (no trained model)</span>
+          </div>
+          {% endif %}
+        </div>
+      {% else %}
+        <p style="color:#999;">Not enough historical data to compute direction statistics.</p>
+      {% endif %}
+    </div>
 
     <!-- <div>Last flight: {{data[0].last_flight_date}}</div> -->
 

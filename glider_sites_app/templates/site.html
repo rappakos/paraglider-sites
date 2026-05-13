@@ -27,6 +27,7 @@
     display: flex;
     flex-direction: column-reverse;
     align-items: stretch;
+    justify-content: flex-start;
     width: 100%;
   }
   .dir-bar-baseline {
@@ -111,11 +112,11 @@
             <div class="dir-bar-wrap">
               <div class="dir-count">{{b}}</div>
               <div class="dir-bar-stack" style="height:{{b_px}}px;">
-                {% if direction_stats.rf_overlay and o_px > 0 %}
-                  <div class="dir-bar-overlay" style="height:{{o_px}}px;"></div>
-                {% endif %}
                 {% if b_only_px > 0 %}
                   <div class="dir-bar-baseline" style="height:{{b_only_px}}px;"></div>
+                {% endif %}
+                {% if direction_stats.rf_overlay and o_px > 0 %}
+                  <div class="dir-bar-overlay" style="height:{{o_px}}px;"></div>
                 {% endif %}
               </div>
               <div class="dir-label">{{direction_stats.buckets[i]}}</div>

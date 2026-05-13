@@ -63,7 +63,7 @@ async def api_get_site_forecast(
 async def index(request: Request):
     """Home page with all sites"""
     data = await get_all_sites()
-    return templates.TemplateResponse("index.html", {"request": request, "data": data})
+    return templates.TemplateResponse(request, "index.html", {"data": data})
 
 
 @page_router.get("/forecast")
@@ -93,7 +93,7 @@ async def forecast_page(
             site['has_model'] = False
 
     site_data.sort(key=lambda x: x.get('main_direction', ''), reverse=True)            
-    return templates.TemplateResponse("forecast.html", {"request": request,"start_date": start_date,  "data": site_data})
+    return templates.TemplateResponse(request, "forecast.html", {"start_date": start_date, "data": site_data})
 
 @page_router.get("/site/{site_name}")
 async def site_details(request: Request, site_name: str):
@@ -102,8 +102,7 @@ async def site_details(request: Request, site_name: str):
     if not data:
         raise HTTPException(status_code=404, detail="Site not found")
     # Add flights data if needed
-    return templates.TemplateResponse("site.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "site.html", {
         "name": site_name,
         "data": [data]
     })

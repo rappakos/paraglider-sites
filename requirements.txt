@@ -1,4 +1,5 @@
-fastapi
+fastapi>=0.136.1
+starlette>=1.0.0
 uvicorn[standard]
 aiosqlite
 numpy
@@ -16,3 +17,7 @@ playwright>=1.40.0
 #networkx
 #matplotlib
 #seaborn
+xarray
+plotly
+jinja2
+cdsapi

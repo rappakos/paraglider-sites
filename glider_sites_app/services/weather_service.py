@@ -61,7 +61,11 @@ def aggregate_weather(raw_weather_df: DataFrame, main_direction: int) -> DataFra
     # cos(main_direction - wind_direction) gives 1 when aligned, -1 when opposite
     wind_dir_diff = np.radians(main_direction - raw_weather_df['wind_direction_10m'])
     raw_weather_df['wind_alignment'] = np.cos(wind_dir_diff)
-    
+
+    # Decompose wind direction into sin/cos components for circular mean aggregation
+    raw_weather_df['wind_dir_sin'] = np.sin(np.radians(raw_weather_df['wind_direction_10m']))
+    raw_weather_df['wind_dir_cos'] = np.cos(np.radians(raw_weather_df['wind_direction_10m']))
+
     #
     raw_weather_df['blh'] =raw_weather_df.apply(get_blh,axis=1)
     raw_weather_df['lability']=raw_weather_df['temperature_2m'] - raw_weather_df['temperature_850hPa']
@@ -71,6 +75,8 @@ def aggregate_weather(raw_weather_df: DataFrame, main_direction: int) -> DataFra
         'wind_speed_10m': ['mean', 'min'],  # AVG and MIN wind strength
         'wind_gusts_10m': 'max',            # MAX wind gust
         'wind_alignment': 'mean',           # AVG wind alignment with main direction
+        'wind_dir_sin': 'mean',             # For circular mean of wind direction
+        'wind_dir_cos': 'mean',             # For circular mean of wind direction
         'precipitation': 'sum',             # SUM precipitation
         'sunshine_duration': 'sum',         # SUM sunshine
         'cloud_cover_low': 'mean',
@@ -86,6 +92,8 @@ def aggregate_weather(raw_weather_df: DataFrame, main_direction: int) -> DataFra
         'min_wind_speed',
         'max_wind_gust',
         'avg_wind_alignment',
+        'wind_dir_sin_mean',
+        'wind_dir_cos_mean',
         'total_precipitation',
         'total_sunshine',
         'avg_cloud_cover',
@@ -93,6 +101,12 @@ def aggregate_weather(raw_weather_df: DataFrame, main_direction: int) -> DataFra
         'max_boundary_layer_height',
         'max_lapse_rate'
     ]
+
+    # Reconstruct circular mean wind direction from sin/cos components
+    daily_weather['avg_wind_direction'] = (
+        np.degrees(np.arctan2(daily_weather['wind_dir_sin_mean'], daily_weather['wind_dir_cos_mean'])) % 360
+    )
+    daily_weather.drop(columns=['wind_dir_sin_mean', 'wind_dir_cos_mean'], inplace=True)
     
     logger.debug(f"Aggregated {len(raw_weather_df)} hourly records to {len(daily_weather)} daily records")
     

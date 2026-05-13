@@ -1,12 +1,13 @@
 # services/site_service.py
 import asyncio
 import logging
+import numpy as np
 from datetime import datetime, timedelta
 from glider_sites_app.analysis.probabilities import load_site_params_and_fit_weights
 from glider_sites_app.repositories.sites_repository import get_stats
 from glider_sites_app.analysis.model_loader import load_site_model, load_bayesian_model
 from glider_sites_app.analysis.bayes_network import DURATION_BIN_EDGES, predict_from_raw_weather
-from glider_sites_app.services.weather_service import load_forecast_weather
+from glider_sites_app.services.weather_service import load_forecast_weather, load_agg_weather_data
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -142,6 +143,77 @@ async def get_forecast_data(site_name: str, start_date: str = '2025-06-01', end_
     }
     
     return forecast_data
+
+
+# 16-point compass labels in clockwise order starting at N (index = round(deg/22.5) % 16)
+_COMPASS_LABELS_CW = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW']
+# Display order: CCW from N — indices into _COMPASS_LABELS_CW
+_DISPLAY_ORDER = [0, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+_DISPLAY_LABELS = [_COMPASS_LABELS_CW[i] for i in _DISPLAY_ORDER]
+
+_RF_FEATURES = ['avg_wind_speed', 'avg_wind_alignment', 'max_wind_gust', 'min_wind_speed',
+                'total_sunshine', 'total_precipitation', 'max_lapse_rate']
+_MIN_DAYS_FOR_STATS = 10
+
+
+async def get_direction_stats(site_name: str) -> dict | None:
+    """Return 16-bucket compass histogram data for the site details page.
+
+    Returns a dict with keys:
+        buckets       – list of 16 compass labels in display order (CCW from N)
+        baseline      – count of filtered historical days per bucket
+        rf_overlay    – count of RF-predicted-flyable days per bucket, or None
+        total_days    – total filtered days included in baseline
+        rf_overlay_days – total days in overlay, or None
+    Returns None when there is insufficient historical data.
+    """
+    weather_df = await load_agg_weather_data(site_name)
+    if weather_df.empty:
+        return None
+
+    # Wind-speed band filter
+    filtered = weather_df[
+        (weather_df['avg_wind_speed'] >= 4) &
+        (weather_df['avg_wind_speed'] <= 40)
+    ].copy()
+
+    # Drop rows with NaN in any RF feature or the direction column
+    required_cols = _RF_FEATURES + ['avg_wind_direction']
+    filtered.dropna(subset=required_cols, inplace=True)
+
+    if len(filtered) < _MIN_DAYS_FOR_STATS:
+        return None
+
+    # Assign each row to a compass bucket (0 = N, 1 = NNE, …, 15 = NNW clockwise)
+    filtered['bucket'] = (filtered['avg_wind_direction'] / 22.5).round().astype(int) % 16
+
+    # Baseline counts per bucket
+    bucket_counts = filtered['bucket'].value_counts()
+    baseline_cw = [int(bucket_counts.get(i, 0)) for i in range(16)]
+    baseline = [baseline_cw[i] for i in _DISPLAY_ORDER]
+
+    # RF overlay
+    rf_overlay = None
+    rf_overlay_days = None
+    rf_model = await asyncio.to_thread(load_site_model, site_name, type='classifier')
+    if rf_model is not None:
+        overlay_df = filtered.copy()
+        overlay_df['avg_wind_alignment'] = 0.9
+        features = rf_model.get('features', _RF_FEATURES)
+        predictions = await asyncio.to_thread(rf_model['model'].predict, overlay_df[features])
+        flyable_df = overlay_df[predictions]
+        flyable_counts = flyable_df['bucket'].value_counts()
+        overlay_cw = [int(flyable_counts.get(i, 0)) for i in range(16)]
+        rf_overlay = [overlay_cw[i] for i in _DISPLAY_ORDER]
+        rf_overlay_days = int(sum(rf_overlay))
+
+    return {
+        'buckets': _DISPLAY_LABELS,
+        'baseline': baseline,
+        'rf_overlay': rf_overlay,
+        'total_days': int(len(filtered)),
+        'rf_overlay_days': rf_overlay_days,
+    }
 
 
 if __name__ == "__main__":

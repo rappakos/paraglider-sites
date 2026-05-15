@@ -216,6 +216,94 @@ async def get_direction_stats(site_name: str) -> dict | None:
     }
 
 
+_MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+
+async def get_monthly_direction_stats(site_name: str) -> dict | None:
+    """Return a 12×16 grid of (rf_flyable / total) day counts per month and compass direction.
+
+    Returns a dict with keys:
+        buckets   – list of 16 compass labels in display order (CCW from N)
+        months    – list of 12 month abbreviations (Jan … Dec)
+        has_rf    – bool, True when an RF model is available
+        grid      – list of 12 dicts, each:
+                      { 'month': str,
+                        'cells': [ {'baseline': int, 'rf': int}, … ] × 16 }
+    Returns None when there is insufficient historical data.
+    """
+    weather_df = await load_agg_weather_data(site_name)
+    if weather_df.empty:
+        return None
+
+    # Same filtering as get_direction_stats
+    filtered = weather_df[
+        (weather_df['avg_wind_speed'] >= 4) &
+        (weather_df['avg_wind_speed'] <= 40)
+    ].copy()
+
+    required_cols = _RF_FEATURES + ['avg_wind_direction']
+    filtered.dropna(subset=required_cols, inplace=True)
+
+    if len(filtered) < _MIN_DAYS_FOR_STATS:
+        return None
+
+    # Bucket and month columns
+    filtered['bucket'] = (filtered['avg_wind_direction'] / 22.5).round().astype(int) % 16
+    filtered['month'] = filtered['date'].dt.month  # 1–12
+
+    # Baseline counts: (month, bucket) → int
+    baseline_counts = (
+        filtered.groupby(['month', 'bucket'])
+        .size()
+        .unstack(fill_value=0)  # rows=month(1-12), cols=bucket(0-15)
+    )
+
+    # RF overlay
+    has_rf = False
+    rf_counts = None
+    rf_model = await asyncio.to_thread(load_site_model, site_name, type='classifier')
+    if rf_model is not None:
+        has_rf = True
+        overlay_df = filtered.copy()
+        overlay_df['avg_wind_alignment'] = 0.9
+        features = rf_model.get('features', _RF_FEATURES)
+        predictions = await asyncio.to_thread(rf_model['model'].predict, overlay_df[features])
+        flyable_df = overlay_df[predictions]
+        rf_counts = (
+            flyable_df.groupby(['month', 'bucket'])
+            .size()
+            .unstack(fill_value=0)
+        )
+
+    # Build the 12×16 grid in display order
+    grid = []
+    totals = [{'baseline': 0, 'rf': 0} for _ in range(16)]
+    for month_idx in range(1, 13):  # 1–12
+        cells = []
+        for col_idx, bucket_cw in enumerate(_DISPLAY_ORDER):  # 16 display-ordered buckets
+            b = int(baseline_counts.loc[month_idx, bucket_cw])  \
+                if month_idx in baseline_counts.index and bucket_cw in baseline_counts.columns \
+                else 0
+            r = int(rf_counts.loc[month_idx, bucket_cw])  \
+                if has_rf and rf_counts is not None \
+                    and month_idx in rf_counts.index \
+                    and bucket_cw in rf_counts.columns \
+                else 0
+            cells.append({'baseline': b, 'rf': r})
+            totals[col_idx]['baseline'] += b
+            totals[col_idx]['rf'] += r
+        grid.append({'month': _MONTH_LABELS[month_idx - 1], 'cells': cells})
+
+    return {
+        'buckets': _DISPLAY_LABELS,
+        'months': _MONTH_LABELS,
+        'has_rf': has_rf,
+        'grid': grid,
+        'totals': totals,
+    }
+
+
 if __name__ == "__main__":
     import asyncio
     from dotenv import load_dotenv

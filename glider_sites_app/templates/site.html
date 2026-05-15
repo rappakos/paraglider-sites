@@ -66,6 +66,33 @@
     height: 14px;
     border-radius: 2px;
   }
+  .month-grid {
+    margin-top: 2em;
+    border-collapse: collapse;
+    font-size: 0.7em;
+  }
+  .month-grid th,
+  .month-grid td {
+    border: 1px solid #ddd;
+    padding: 3px 5px;
+    text-align: center;
+    min-width: 2.8em;
+    white-space: nowrap;
+  }
+  .month-grid thead th {
+    background: #f0f4f8;
+    font-weight: 600;
+    font-size: 0.95em;
+  }
+  .month-grid tbody th {
+    background: #f7f7f7;
+    font-weight: 600;
+    text-align: left;
+    padding-right: 8px;
+  }
+  .month-grid td.no-data {
+    color: #bbb;
+  }
 </style>
 {% endblock %}
 
@@ -140,6 +167,61 @@
         <p style="color:#999;">Not enough historical data to compute direction statistics.</p>
       {% endif %}
     </div>
+
+    {# Monthly wind direction grid #}
+    {% if monthly_direction_stats %}
+    <div style="margin-top: 2em; overflow-x: auto;">
+      <h3>Monthly wind direction grid</h3>
+      <p style="font-size:0.8em; color:#555; margin-bottom:0.5em;">
+        Rows = month &nbsp;|&nbsp; Columns = wind direction (CCW from N) &nbsp;|&nbsp;
+        {% if monthly_direction_stats.has_rf %}
+          Cells = <em>RF flyable days (at alignment 0.9) / total days</em> (wind 4–40 km/h)
+        {% else %}
+          Cells = <em>total days</em> (wind 4–40 km/h, no RF model)
+        {% endif %}
+      </p>
+      <table class="month-grid">
+        <thead>
+          <tr>
+            <th></th>
+            {% for bucket in monthly_direction_stats.buckets %}
+              <th>{{bucket}}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in monthly_direction_stats.grid %}
+            <tr>
+              <th>{{row.month}}</th>
+              {% for cell in row.cells %}
+                {% if cell.baseline == 0 %}
+                  <td class="no-data" data-baseline="0" data-rf="0">-</td>
+                {% elif monthly_direction_stats.has_rf %}
+                  <td data-baseline="{{cell.baseline}}" data-rf="{{cell.rf}}">{{cell.rf}}/{{cell.baseline}}</td>
+                {% else %}
+                  <td data-baseline="{{cell.baseline}}" data-rf="0">{{cell.baseline}}</td>
+                {% endif %}
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr style="font-weight:600; background:#f0f4f8;">
+            <th>Total</th>
+            {% for cell in monthly_direction_stats.totals %}
+              {% if cell.baseline == 0 %}
+                <td class="no-data" data-baseline="0" data-rf="0">-</td>
+              {% elif monthly_direction_stats.has_rf %}
+                <td data-baseline="{{cell.baseline}}" data-rf="{{cell.rf}}">{{cell.rf}}/{{cell.baseline}}</td>
+              {% else %}
+                <td data-baseline="{{cell.baseline}}" data-rf="0">{{cell.baseline}}</td>
+              {% endif %}
+            {% endfor %}
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    {% endif %}
 
     <!-- <div>Last flight: {{data[0].last_flight_date}}</div> -->
 

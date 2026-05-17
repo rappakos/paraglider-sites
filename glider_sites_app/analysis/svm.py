@@ -20,7 +20,7 @@ k_folds = 5
 # Threshold on log1p(flight_count) scale used to derive binary flyability from regression output.
 # A prediction above this value is treated as "flyable".
 # Intended to be tuned globally (same value across all sites) once models for all sites exist.
-FLYABLE_THRESHOLD = 0.0
+FLYABLE_THRESHOLD = 0.5
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

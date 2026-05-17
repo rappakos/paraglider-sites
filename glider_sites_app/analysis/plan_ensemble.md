@@ -17,26 +17,26 @@ as a single ensemble artefact.  Service integration is deferred.
 
 ## Phase A — New `glider_sites_app/analysis/ensemble.py`
 
-- [ ] **`svm_to_prob(log_count, threshold, scale=0.5)`** helper
+- [x] **`svm_to_prob(log_count, threshold, scale=0.5)`** helper
   - `sigmoid((log_count - threshold) / scale)`
   - `scale` controls steepness: at `scale=0.5`, one log-unit spans roughly 0.12 → 0.88
   - `threshold` defaults to `FLYABLE_THRESHOLD` imported from `svm.py` (single source of truth)
 
-- [ ] **`_collect_oof_predictions(site_name)`** private async function
+- [x] **`_collect_oof_predictions(site_name)`** private async function
   - `prepare_training_data(site_name)` → same 7 features
   - Ground truth: `y = flight_count > 0` (binary, matches RF training target)
   - `KFold(k_folds, shuffle=True, random_state=SEED)` — same folds as RF/SVM
   - Per fold: fit RF classifier + SVM pipeline on train split, predict on val split
   - Returns `(y_true, rf_proba_oof, svm_log_oof)` — three aligned arrays
 
-- [ ] **`scan_ensemble_alpha(site_name, alphas=np.arange(0, 1.05, 0.05))`** async function
+- [x] **`scan_ensemble_alpha(site_name, alphas=np.arange(0, 1.05, 0.05))`** async function
   - Calls `_collect_oof_predictions` once; reuses OOF arrays for all alpha values
   - For each alpha: `ensemble_prob = alpha * rf_prob + (1-alpha) * svm_prob(svm_log)`
     - Decision boundary at 0.5; compute F1
   - Returns DataFrame `[alpha, mean_f1, std_f1]` sorted by `mean_f1` desc; logs full table
   - Also logs standalone RF F1 (alpha=1.0) and SVM F1 (alpha=0.0) for reference
 
-- [ ] **`train_ensemble(site_name, save=False)`** async function
+- [x] **`train_ensemble(site_name, save=False)`** async function
   - Calls `scan_ensemble_alpha` → picks best `alpha`
   - Logs: best alpha + ensemble F1 vs standalone RF F1 vs standalone SVM F1
   - Fits final RF classifier + SVM pipeline each on **full** dataset
@@ -55,14 +55,14 @@ as a single ensemble artefact.  Service integration is deferred.
     ```
   - If `save=True`: calls `save_ensemble_results(site_name, result)`
 
-- [ ] **`predict_ensemble(ensemble_data, X)`** pure function (sync, for use in service)
+- [x] **`predict_ensemble(ensemble_data, X)`** pure function (sync, for use in service)
   - `rf_prob = ensemble_data['rf_model'].predict_proba(X)[:, 1]`
   - `svm_log = ensemble_data['svm_model'].predict(X)`
   - `svm_prob = svm_to_prob(svm_log, ...)`
   - `ensemble_prob = alpha * rf_prob + (1 - alpha) * svm_prob`
   - Returns DataFrame with columns: `ensemble_prob`, `is_flyable`, `rf_prob`, `svm_prob`
 
-- [ ] **`__main__` block**
+- [x] **`__main__` block**
   - `train_ensemble('Rammelsberg NW', save=True)`
   - `scan_ensemble_alpha('Rammelsberg NW')` (prints alpha sweep table)
 
@@ -70,9 +70,9 @@ as a single ensemble artefact.  Service integration is deferred.
 
 ## Phase B — Update `glider_sites_app/analysis/model_loader.py`
 
-- [ ] `get_ensemble_model_path(site_name)` → `models/{site_name_clean}_ensemble_model.joblib`
-- [ ] `save_ensemble_results(site_name, results)` → `joblib.dump(results, path)`
-- [ ] `load_ensemble_model(site_name)` → returns full dict or `None` if file missing
+- [x] `get_ensemble_model_path(site_name)` → `models/{site_name_clean}_ensemble_model.joblib`
+- [x] `save_ensemble_results(site_name, results)` → `joblib.dump(results, path)`
+- [x] `load_ensemble_model(site_name)` → returns full dict or `None` if file missing
 - Note: no changes to existing RF or SVM loader functions
 
 ---

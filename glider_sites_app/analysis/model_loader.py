@@ -148,3 +148,42 @@ def load_svm_model(site_name: str):
     if not model_path.exists():
         return None
     return joblib.load(model_path)
+
+
+# --- Ensemble ---
+
+def get_ensemble_model_path(site_name: str) -> pathlib.Path:
+    """Get the file path for the ensemble model of the given site"""
+    model_dir = pathlib.Path(__file__).parent / "models"
+    return model_dir / f"{site_name.replace(' ', '_')}_ensemble_model.joblib"
+
+
+def save_ensemble_results(site_name: str, results: dict):
+    """Save ensemble training results to a file
+
+    Args:
+        site_name: Name of the site
+        results: Model data dictionary (must include 'rf_model', 'svm_model', 'alpha',
+                 'sigmoid_scale', 'flyable_threshold', 'feature_importance_rf', 'feature_importance_svm')
+    """
+    results_path = get_ensemble_model_path(site_name)
+    results_path.parent.mkdir(exist_ok=True)
+    joblib.dump(results, results_path)
+    logger.info(f"Ensemble model saved to {results_path}")
+
+
+def load_ensemble_model(site_name: str):
+    """Load a pre-trained ensemble model for the given site
+
+    Args:
+        site_name: Name of the site
+
+    Returns:
+        Dictionary with keys 'rf_model', 'svm_model', 'alpha', 'sigmoid_scale',
+        'flyable_threshold', 'feature_importance_rf', 'feature_importance_svm',
+        or None if no saved model exists.
+    """
+    model_path = get_ensemble_model_path(site_name)
+    if not model_path.exists():
+        return None
+    return joblib.load(model_path)

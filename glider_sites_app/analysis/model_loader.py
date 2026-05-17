@@ -111,3 +111,40 @@ def load_bayesian_model(site_name: str):
         Dictionary with model and metadata, or None if not found
     """
     return load_site_model(site_name, 'bayesian')
+
+
+# --- SVM ---
+
+def get_svm_model_path(site_name: str) -> pathlib.Path:
+    """Get the file path for the SVM model of the given site"""
+    model_dir = pathlib.Path(__file__).parent / "models"
+    return model_dir / f"{site_name.replace(' ', '_')}_svm_model.joblib"
+
+
+def save_svm_results(site_name: str, results: dict):
+    """Save SVM training results to a file
+
+    Args:
+        site_name: Name of the site
+        results: Model data dictionary (must include 'model', 'features', 'feature_importance', 'flyable_threshold')
+    """
+    results_path = get_svm_model_path(site_name)
+    results_path.parent.mkdir(exist_ok=True)
+    joblib.dump(results, results_path)
+    logger.info(f"SVM model saved to {results_path}")
+
+
+def load_svm_model(site_name: str):
+    """Load a pre-trained SVM model for the given site
+
+    Args:
+        site_name: Name of the site
+
+    Returns:
+        Dictionary with keys 'model', 'features', 'feature_importance', 'flyable_threshold',
+        or None if no saved model exists.
+    """
+    model_path = get_svm_model_path(site_name)
+    if not model_path.exists():
+        return None
+    return joblib.load(model_path)

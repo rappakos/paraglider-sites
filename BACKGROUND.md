@@ -96,3 +96,16 @@ In the flatlands of northern Germany (Niedersachsen) we have some special consid
 * **Output**: Provides probability distributions over discrete outcomes rather than point predictions (e.g., P(Flyable|weather), P(XC_Score_Category|weather, site, pilot))
 * **Discretization**: Continuous weather variables are binned into interpretable categories (e.g., wind speed: Low/Medium/High) to enable tractable probabilistic inference
 * **Disadvantage**: Physical parameters need careful discretization (handling continuous random variables is more complicated)
+
+
+### SVM Regressor (SVR)
+
+* **Approach**: Support Vector Regression with RBF kernel as a complement to the Random Forest classifier
+* **Rationale**: Different inductive bias (margin-maximizing, kernel-based) compared to RF; expected to capture different patterns, especially in lower-data regimes where the RF may overfit
+* **Preprocessing**: `StandardScaler` is mandatory for SVM (sensitive to feature scale). The scaler is embedded inside a `sklearn.Pipeline` so it is fitted only on training folds during cross-validation — no data leakage
+* **Features**: Same 7 features as the Random Forest (`avg_wind_speed`, `avg_wind_alignment`, `max_wind_gust`, `min_wind_speed`, `total_sunshine`, `total_precipitation`, `max_lapse_rate`)
+* **Target**: `log1p(flight_count)` — regression on log-transformed daily flight count
+* **Flyability F1**: Binary flyability is derived by thresholding predicted log-counts at `FLYABLE_THRESHOLD` (module-level constant, default `0.0`). The threshold is intended to be tuned globally — same value across all sites — once models for all sites exist
+* **Feature importance**: Native `feature_importances_` is not available for SVR. Permutation importance (10 repeats, scored by RMSE) is used instead
+* **Hyperparameters**: RBF kernel, `C=10`, `epsilon=0.1`, `gamma='scale'`
+* **Output**: Saved as a single `Pipeline` object (`StandardScaler` + `SVR`) so predictions on new data are automatically scaled correctly

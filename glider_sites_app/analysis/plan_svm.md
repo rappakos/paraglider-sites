@@ -2,10 +2,10 @@
 
 ## Phase 1 — New `glider_sites_app/analysis/svm.py`
 
-- [ ] Module constants: `SEED = 431`, `k_folds = 5`, `FLYABLE_THRESHOLD = 0.0`
+- [x] Module constants: `SEED = 431`, `k_folds = 5`, `FLYABLE_THRESHOLD = 0.0`
   - Configurable float on log-scale; `y_pred > FLYABLE_THRESHOLD` → flyable
   - Intended to be tuned globally (same value across all sites) once models exist
-- [ ] `async train_svm_regressor(site_name, save=False)` function
+- [x] `async train_svm_regressor(site_name, save=False)` function
   - Call `prepare_training_data(site_name)` — same as RF
   - Guard: `len(df) < 50` → log error, return `None`
   - Same 7 features as RF: `avg_wind_speed`, `avg_wind_alignment`, `max_wind_gust`, `min_wind_speed`, `total_sunshine`, `total_precipitation`, `max_lapse_rate`
@@ -19,19 +19,19 @@
   - Permutation importance: `permutation_importance(pipe, X, y, n_repeats=10, random_state=SEED)` → DataFrame sorted by mean, desc
   - Return dict: `{site_name, model (pipeline), features, feature_importance, flyable_threshold}`
   - If `save=True`: call `save_svm_results()`
-- [ ] `__main__` block mirroring RF's block (Dielmissen, `do_save=True`)
+- [x] `__main__` block mirroring RF's block (Dielmissen, `do_save=True`)
 
 ## Phase 2 — Update `glider_sites_app/analysis/model_loader.py`
 
-- [ ] `get_svm_model_path(site_name)` → `models/{site_name_clean}_svm_model.joblib`
-- [ ] `save_svm_results(site_name, results)` → `joblib.dump(results, path)`
-- [ ] `load_svm_model(site_name)` → returns full dict or `None` if file missing
+- [x] `get_svm_model_path(site_name)` → `models/{site_name_clean}_svm_model.joblib`
+- [x] `save_svm_results(site_name, results)` → `joblib.dump(results, path)`
+- [x] `load_svm_model(site_name)` → returns full dict or `None` if file missing
 - Note: no changes to existing RF functions
 
 ## Phase 3 — Documentation
 
-- [ ] `README.md`: add `### SVM regressor` CLI section under `## Analysis`
-- [ ] `BACKGROUND.md`: add `### SVM Regressor (SVR)` model section covering:
+- [x] `README.md`: add `### SVM regressor` CLI section under `## Analysis`
+- [x] `BACKGROUND.md`: add `### SVM Regressor (SVR)` model section covering:
   - RBF kernel, mandatory StandardScaler (inside Pipeline), permutation importance
   - Same 7 features as RF, log1p target, configurable flyability threshold
 

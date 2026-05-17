@@ -80,6 +80,13 @@ Run classification and regression models:
 python -m glider_sites_app.analysis.random_forest
 ```
 
+### SVM regressor
+
+Train the Support Vector Regression model:
+```powershell
+python -m glider_sites_app.analysis.svm
+```
+
 ### Bayes network
 
 Run probabilistic inference:

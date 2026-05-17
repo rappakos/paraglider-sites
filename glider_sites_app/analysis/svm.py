@@ -131,4 +131,4 @@ async def train_svm_regressor(site_name: str, save: bool = False):
 if __name__ == '__main__':
     import asyncio
     do_save = True
-    asyncio.run(train_svm_regressor('Dielmissen', save=do_save))
+    asyncio.run(train_svm_regressor('Rammelsberg NW', save=do_save))

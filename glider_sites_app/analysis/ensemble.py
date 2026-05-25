@@ -416,5 +416,5 @@ if __name__ == '__main__':
     import asyncio
     do_save = False
     #asyncio.run(train_ensemble('Dielmissen', save=do_save))
-    asyncio.run(compare_all_sites(alpha_fixed=0.3))
+    asyncio.run(compare_all_sites(alpha_fixed=0.35))
     #asyncio.run(diagnose_competitor_effect('Königszinne'))

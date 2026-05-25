@@ -16,6 +16,13 @@ SITE_MIN_DATE = {
     'Porta': date(2020, 1, 1),
 }
 
+# Competitor sites: when these sites had flights but ours didn't,
+# it's likely a site-choice issue rather than non-flyable conditions.
+# Feature: total flight count at competitor sites on that day.
+COMPETITOR_SITES = {
+    'Dielmissen': ['Börry', 'Königszinne'],
+}
+
 async def prepare_training_data(site_name: str, use_workingdays: bool = False, FKPilotID: str = None) -> pd.DataFrame:
     """Merge flight and weather data"""
     logger.info(f"Loading data for {site_name}")
@@ -48,6 +55,25 @@ async def prepare_training_data(site_name: str, use_workingdays: bool = False, F
     merged_df['flight_count'] = merged_df['flight_count'].fillna(0)
     merged_df['best_score'] = merged_df['best_score'].fillna(0)
     merged_df['max_daily_score'] =merged_df['max_daily_score'].fillna(0)
+
+    # Add competitor flights feature
+    competitors = COMPETITOR_SITES.get(site_name, [])
+    if competitors:
+        competitor_dfs = []
+        for comp_site in competitors:
+            comp_flights = await load_flight_data(comp_site)
+            comp_flights['date'] = pd.to_datetime(comp_flights['date']).dt.date
+            competitor_dfs.append(comp_flights[['date', 'flight_count']].rename(
+                columns={'flight_count': f'flights_{comp_site}'}
+            ))
+        for comp_df in competitor_dfs:
+            merged_df = merged_df.merge(comp_df, on='date', how='left')
+        comp_cols = [c for c in merged_df.columns if c.startswith('flights_')]
+        merged_df[comp_cols] = merged_df[comp_cols].fillna(0)
+        merged_df['competitor_flights'] = merged_df[comp_cols].sum(axis=1)
+        merged_df.drop(columns=comp_cols, inplace=True)
+    else:
+        merged_df['competitor_flights'] = 0
 
     # Keep only weekends OR weekdays with flights
     if not use_workingdays:

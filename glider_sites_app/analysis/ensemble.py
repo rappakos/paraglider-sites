@@ -353,6 +353,61 @@ async def compare_all_sites(alpha_fixed: float = 0.3):
     return df
 
 
+async def diagnose_competitor_effect(site_name: str = 'Dielmissen'):
+    """Show how competitor flights correlate with missing flights at this site.
+
+    For days where this site had 0 flights, how many had competitor flights?
+    Breaks down by wind alignment quality.
+    """
+    df = await prepare_training_data(site_name)
+
+    no_flights = df[df['flight_count'] == 0]
+    has_flights = df[df['flight_count'] > 0]
+
+    total_zero = len(no_flights)
+    comp_flew_zero = (no_flights['competitor_flights'] > 0).sum()
+
+    total_pos = len(has_flights)
+    comp_flew_pos = (has_flights['competitor_flights'] > 0).sum()
+
+    logger.info(f"\n{'='*60}\nCompetitor flight diagnosis for {site_name}\n{'='*60}")
+    logger.info(f"Total days: {len(df)} (flying: {total_pos}, zero: {total_zero})")
+    logger.info(f"Zero-flight days where competitors flew: {comp_flew_zero}/{total_zero} ({100*comp_flew_zero/max(total_zero,1):.1f}%)")
+    logger.info(f"Flying days where competitors also flew: {comp_flew_pos}/{total_pos} ({100*comp_flew_pos/max(total_pos,1):.1f}%)")
+
+    # Break down by wind alignment bins
+    bins = [-1, 0.0, 0.3, 0.6, 1.0]
+    labels = ['Against(<0)', 'Cross(0-0.3)', 'OK(0.3-0.6)', 'Good(>0.6)']
+    df['align_bin'] = pd.cut(df['avg_wind_alignment'], bins=bins, labels=labels)
+
+    pivot = df.groupby('align_bin', observed=True).agg(
+        days=('flight_count', 'count'),
+        flying_days=('flight_count', lambda x: (x > 0).sum()),
+        zero_with_comp=('flight_count', lambda x: 0),  # placeholder
+    ).reset_index()
+
+    # Recompute zero_with_comp properly
+    rows = []
+    for label in labels:
+        subset = df[df['align_bin'] == label]
+        zero_subset = subset[subset['flight_count'] == 0]
+        rows.append({
+            'alignment': label,
+            'days': len(subset),
+            'flying_days': int((subset['flight_count'] > 0).sum()),
+            'zero_days': len(zero_subset),
+            'zero_w_comp': int((zero_subset['competitor_flights'] > 0).sum()),
+        })
+
+    diag_df = pd.DataFrame(rows)
+    diag_df['fly_rate'] = (diag_df['flying_days'] / diag_df['days'].clip(lower=1)).round(3)
+    diag_df['zero_comp_rate'] = (diag_df['zero_w_comp'] / diag_df['zero_days'].clip(lower=1)).round(3)
+    logger.info(f"\nBy wind alignment:\n{diag_df.to_string(index=False)}")
+    logger.info(f"{'='*60}")
+
+    return diag_df
+
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
@@ -362,4 +417,5 @@ if __name__ == '__main__':
     #do_save = False
     #site = 'Dielmissen'
     #asyncio.run(train_ensemble(site, save=do_save))
-    asyncio.run(compare_all_sites(alpha_fixed=0.3))
+    #asyncio.run(compare_all_sites(alpha_fixed=0.3))
+    asyncio.run(diagnose_competitor_effect('Dielmissen'))

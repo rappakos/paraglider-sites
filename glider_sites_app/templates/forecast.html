@@ -84,7 +84,7 @@
         
         <div class="legend-section">
             <h4>Models</h4>
-            <p><strong>RF:</strong> Random Forest Model prediction.</p>
+            <p><strong>ENS:</strong> Ensemble model (RF + SVR blend).</p>
             <p><strong>BN:</strong> Bayesian Network Model prediction.</p>
         </div>
         <div class="legend-section">
@@ -182,11 +182,11 @@
                         {% for day in site.forecast.forecast[:7] %}
                             <td class="forecast-cell">
                                 <div class="forecast-cell-content {% if day.rf_prediction == 1 or day.rf_prediction == 'Yes' %}forecast-cell-flyable{% else %}forecast-cell-nofly{% endif %}">
-                                    <!-- RF and BN Predictions Side by Side -->
+                                    <!-- Ensemble and BN Predictions Side by Side -->
                                     <div class="predictions-row">
-                                        <!-- Random Forest Prediction -->
+                                        <!-- Ensemble Prediction -->
                                         <div class="prediction-section rf-section">
-                                            <div class="prediction-label">RF</div>
+                                            <div class="prediction-label">ENS</div>
                                             {% if day.rf_prediction == 1 or day.rf_prediction == 'Yes' %}
                                                 <span class="prediction-icon icon-yes">✓</span>
                                             {% else %}

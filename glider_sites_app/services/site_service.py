@@ -5,9 +5,11 @@ import numpy as np
 from datetime import datetime, timedelta
 from glider_sites_app.analysis.probabilities import load_site_params_and_fit_weights
 from glider_sites_app.repositories.sites_repository import get_stats
-from glider_sites_app.analysis.model_loader import load_site_model, load_bayesian_model
+from glider_sites_app.analysis.model_loader import load_site_model, load_bayesian_model, load_ensemble_model
 from glider_sites_app.analysis.bayes_network import DURATION_BIN_EDGES, predict_from_raw_weather
 from glider_sites_app.services.weather_service import load_forecast_weather, load_agg_weather_data
+from glider_sites_app.analysis.ensemble import predict_ensemble
+from glider_sites_app.analysis.svm import BASE_FEATURES
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -37,8 +39,13 @@ async def get_site_data(site_name: str):
     result =  current.to_dict('records')[0]
 
     # Run blocking I/O in thread pool to avoid blocking event loop
+    ensemble_data = await asyncio.to_thread(load_ensemble_model, site_name)
     rf_model = await asyncio.to_thread(load_site_model, site_name, type='classifier')
-    if rf_model is not None:
+
+    if ensemble_data is not None:
+        result['has_model'] = True
+        result['rf_model'] = {'feature_importances': ensemble_data['feature_importance_rf'].to_dict('records')}
+    elif rf_model is not None:
         result['has_model'] = True
         result['rf_model'] = {'feature_importances': rf_model['feature_importance'].to_dict('records')}
     else:
@@ -89,18 +96,29 @@ async def get_forecast_data(site_name: str, start_date: str = '2025-06-01', end_
         return None
 
     # Run blocking I/O in thread pool to avoid blocking event loop
+    ensemble_data = await asyncio.to_thread(load_ensemble_model, site_name)
     rf_model = await asyncio.to_thread(load_site_model, site_name, type='classifier')
-    if rf_model is None:
+
+    if ensemble_data is None and rf_model is None:
         return None
 
     weather_df = await load_forecast_weather(site_name, start_date, end_date)
-    X = weather_df[rf_model['features']]
-    # Run blocking predict in thread pool
-    rf_prediction = await asyncio.to_thread(rf_model['model'].predict, X)
-    weather_df['rf_prediction'] = rf_prediction
-    # Fraction of trees voting for the predicted class
-    rf_proba = await asyncio.to_thread(rf_model['model'].predict_proba, X)    
-    weather_df['rf_confidence'] = rf_proba.max(axis=1)
+
+    if ensemble_data is not None:
+        # Use ensemble (RF + SVR blend)
+        X = weather_df[BASE_FEATURES]
+        ens_result = await asyncio.to_thread(predict_ensemble, ensemble_data, X, weather_df)
+        weather_df['rf_prediction'] = ens_result['is_flyable'].astype(int)
+        weather_df['rf_confidence'] = ens_result['ensemble_prob']
+        weather_df['prediction_model'] = 'ensemble'
+    else:
+        # Fallback to standalone RF
+        X = weather_df[rf_model['features']]
+        rf_prediction = await asyncio.to_thread(rf_model['model'].predict, X)
+        weather_df['rf_prediction'] = rf_prediction
+        rf_proba = await asyncio.to_thread(rf_model['model'].predict_proba, X)
+        weather_df['rf_confidence'] = rf_proba.max(axis=1)
+        weather_df['prediction_model'] = 'rf'
 
     # Load Bayesian model and add predictions
     bayesian_model_data = await asyncio.to_thread(load_bayesian_model, site_name)

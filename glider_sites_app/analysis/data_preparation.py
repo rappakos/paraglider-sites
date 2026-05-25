@@ -21,6 +21,7 @@ SITE_MIN_DATE = {
 # Feature: total flight count at competitor sites on that day.
 COMPETITOR_SITES = {
     'Dielmissen': ['Börry', 'Königszinne'],
+    #'Königszinne': ['Dielmissen', 'Rammelsberg NW'], did not seem to cause noise
 }
 
 async def prepare_training_data(site_name: str, use_workingdays: bool = False, FKPilotID: str = None) -> pd.DataFrame:

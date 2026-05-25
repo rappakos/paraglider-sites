@@ -414,8 +414,8 @@ async def diagnose_competitor_effect(site_name: str = 'Dielmissen'):
 
 if __name__ == '__main__':
     import asyncio
-    #do_save = False
-    #site = 'Dielmissen'
+    do_save = False
+    site = 'Dielmissen'
     #asyncio.run(train_ensemble(site, save=do_save))
-    #asyncio.run(compare_all_sites(alpha_fixed=0.3))
-    asyncio.run(diagnose_competitor_effect('Dielmissen'))
+    asyncio.run(compare_all_sites(alpha_fixed=0.3))
+    #asyncio.run(diagnose_competitor_effect('Dielmissen'))

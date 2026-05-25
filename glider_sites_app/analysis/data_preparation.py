@@ -78,7 +78,20 @@ async def prepare_training_data(site_name: str, use_workingdays: bool = False, F
     # Keep only weekends OR weekdays with flights
     if not use_workingdays:
         filter = (merged_df['is_weekend'] == 1) | (merged_df['flight_count'] > 0)
-        merged_df = merged_df[filter]   
+        merged_df = merged_df[filter]
+
+    # Remove ambiguous zero-flight days: good alignment + competitors flew
+    # These are likely flyable days where pilots chose a different site.
+    if competitors:
+        ambiguous = (
+            (merged_df['flight_count'] == 0) &
+            (merged_df['competitor_flights'] > 0) &
+            (merged_df['avg_wind_alignment'] > 0.6)
+        )
+        n_removed = ambiguous.sum()
+        if n_removed > 0:
+            merged_df = merged_df[~ambiguous].reset_index(drop=True)
+            logger.info(f"Removed {n_removed} ambiguous zero-flight days (good alignment + competitor flights)")
 
     de_holidays = set(holidays.Germany(prov='NI'))
     merged_df['is_workingday'] =(

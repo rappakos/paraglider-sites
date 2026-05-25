@@ -72,6 +72,12 @@ async def train_svm_regressor(site_name: str, save: bool = False):
         logger.error(f"Insufficient data: only {len(df)} days available")
         return None
 
+    # Drop rows with NaN in any feature column (SVR does not accept missing values)
+    cols_needed = ['avg_wind_speed', 'avg_wind_alignment', 'max_wind_gust', 'min_wind_speed',
+                   'total_sunshine', 'total_precipitation', 'max_lapse_rate']
+    df = df.dropna(subset=cols_needed).reset_index(drop=True)
+    logger.info(f"After dropping NaN rows: {len(df)} days remain")
+
     # Features and target
     X = compute_svm_features(df)
     features = SVM_FEATURES
@@ -150,4 +156,4 @@ async def train_svm_regressor(site_name: str, save: bool = False):
 if __name__ == '__main__':
     import asyncio
     do_save = True
-    asyncio.run(train_svm_regressor('Rammelsberg NW', save=do_save))
+    asyncio.run(train_svm_regressor('Dielmissen', save=do_save))

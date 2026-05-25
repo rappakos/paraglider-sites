@@ -72,6 +72,10 @@ async def _collect_oof_predictions(site_name: str):
         Returns None if insufficient data.
     """
     df = await prepare_training_data(site_name)
+    # Drop rows with NaN in any feature column (SVR does not accept missing values)
+    cols_needed = ['avg_wind_speed', 'avg_wind_alignment', 'max_wind_gust', 'min_wind_speed',
+                   'total_sunshine', 'total_precipitation', 'max_lapse_rate']
+    df = df.dropna(subset=cols_needed).reset_index(drop=True)
     if len(df) < 50:
         logger.error(f"Insufficient data: only {len(df)} days available")
         return None
@@ -167,6 +171,10 @@ async def train_ensemble(site_name: str, save: bool = False) -> dict | None:
         Returns None on insufficient data.
     """
     df = await prepare_training_data(site_name)
+    # Drop rows with NaN in any feature column (SVR does not accept missing values)
+    cols_needed = ['avg_wind_speed', 'avg_wind_alignment', 'max_wind_gust', 'min_wind_speed',
+                   'total_sunshine', 'total_precipitation', 'max_lapse_rate']
+    df = df.dropna(subset=cols_needed).reset_index(drop=True)
     if len(df) < 50:
         logger.error(f"Insufficient data: only {len(df)} days available")
         return None
@@ -298,7 +306,7 @@ def predict_ensemble(ensemble_data: dict, X: np.ndarray, df: pd.DataFrame | None
 
 if __name__ == '__main__':
     import asyncio
-    do_save = True
-    site = 'Porta'
+    do_save = False
+    site = 'Dielmissen'
     asyncio.run(train_ensemble(site, save=do_save))
     asyncio.run(scan_ensemble_alpha(site))

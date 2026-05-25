@@ -301,12 +301,65 @@ def predict_ensemble(ensemble_data: dict, X: np.ndarray, df: pd.DataFrame | None
 
 
 # ---------------------------------------------------------------------------
+# Cross-site comparison
+# ---------------------------------------------------------------------------
+
+ALL_SITES = ['Börry', 'Königszinne', 'Rammelsberg NW', 'Porta', 'Dielmissen','Brunsberg']
+
+async def compare_all_sites(alpha_fixed: float = 0.3):
+    """Loop over all sites and print a tabular overview of ensemble performance.
+
+    Columns: site, days, flying_days, RF_F1, SVM_F1, Ens_F1(fixed), best_α, best_F1
+    """
+    rows = []
+    for site_name in ALL_SITES:
+        oof = await _collect_oof_predictions(site_name)
+        if oof is None:
+            logger.warning(f"Skipping {site_name} — insufficient data")
+            continue
+
+        y_true, rf_proba_oof, svm_log_oof = oof
+        svm_prob_oof = svm_to_prob(svm_log_oof)
+
+        rf_f1 = f1_score(y_true, rf_proba_oof >= 0.5, zero_division=0)
+        svm_f1 = f1_score(y_true, svm_prob_oof >= 0.5, zero_division=0)
+
+        # Fixed alpha ensemble
+        ens_prob_fixed = alpha_fixed * rf_proba_oof + (1.0 - alpha_fixed) * svm_prob_oof
+        ens_f1_fixed = f1_score(y_true, ens_prob_fixed >= 0.5, zero_division=0)
+
+        # Best alpha sweep
+        best_alpha, best_f1 = alpha_fixed, ens_f1_fixed
+        for a in np.arange(0.0, 1.05, 0.05):
+            ens_prob = a * rf_proba_oof + (1.0 - a) * svm_prob_oof
+            f1 = f1_score(y_true, ens_prob >= 0.5, zero_division=0)
+            if f1 > best_f1:
+                best_f1 = f1
+                best_alpha = a
+
+        rows.append({
+            'site': site_name,
+            'days': len(y_true),
+            'flying_days': int(y_true.sum()),
+            'RF_F1': round(rf_f1, 4),
+            'SVM_F1': round(svm_f1, 4),
+            f'Ens_F1(α={alpha_fixed})': round(ens_f1_fixed, 4),
+            'best_α': round(float(best_alpha), 2),
+            'best_F1': round(best_f1, 4),
+        })
+
+    df = pd.DataFrame(rows)
+    logger.info(f"\n{'='*80}\nCross-site ensemble comparison (fixed α={alpha_fixed}):\n{'='*80}\n{df.to_string(index=False)}\n{'='*80}")
+    return df
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
 if __name__ == '__main__':
     import asyncio
-    do_save = False
-    site = 'Dielmissen'
-    asyncio.run(train_ensemble(site, save=do_save))
-    asyncio.run(scan_ensemble_alpha(site))
+    #do_save = False
+    #site = 'Dielmissen'
+    #asyncio.run(train_ensemble(site, save=do_save))
+    asyncio.run(compare_all_sites(alpha_fixed=0.3))

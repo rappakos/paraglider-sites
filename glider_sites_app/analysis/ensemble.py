@@ -13,7 +13,7 @@ from sklearn.svm import SVR
 
 from glider_sites_app.analysis.data_preparation import prepare_training_data
 from glider_sites_app.analysis.model_loader import save_ensemble_results
-from glider_sites_app.analysis.svm import FLYABLE_THRESHOLD
+from glider_sites_app.analysis.svm import BASE_FEATURES, SVM_FEATURES, FLYABLE_THRESHOLD, compute_svm_features
 
 SEED = 431
 k_folds = 5
@@ -76,26 +76,23 @@ async def _collect_oof_predictions(site_name: str):
         logger.error(f"Insufficient data: only {len(df)} days available")
         return None
 
-    features = [
-        'avg_wind_speed', 'avg_wind_alignment', 'max_wind_gust', 'min_wind_speed',
-        'total_sunshine', 'total_precipitation', 'max_lapse_rate',
-    ]
-    X = df[features].values
+    X_rf = df[BASE_FEATURES].values
+    X_svm = compute_svm_features(df)
     y_binary = (df['flight_count'].values > 0).astype(int)
     y_log = np.log1p(df['flight_count'].values)
 
     kf = KFold(n_splits=k_folds, shuffle=True, random_state=SEED)
-    rf_proba_oof = np.zeros(len(X))
-    svm_log_oof = np.zeros(len(X))
+    rf_proba_oof = np.zeros(len(X_rf))
+    svm_log_oof = np.zeros(len(X_rf))
 
-    for train_idx, val_idx in kf.split(X):
+    for train_idx, val_idx in kf.split(X_rf):
         rf = _make_rf()
-        rf.fit(X[train_idx], y_binary[train_idx])
-        rf_proba_oof[val_idx] = rf.predict_proba(X[val_idx])[:, 1]
+        rf.fit(X_rf[train_idx], y_binary[train_idx])
+        rf_proba_oof[val_idx] = rf.predict_proba(X_rf[val_idx])[:, 1]
 
         svm = _make_svm_pipe()
-        svm.fit(X[train_idx], y_log[train_idx])
-        svm_log_oof[val_idx] = svm.predict(X[val_idx])
+        svm.fit(X_svm[train_idx], y_log[train_idx])
+        svm_log_oof[val_idx] = svm.predict(X_svm[val_idx])
 
     return y_binary, rf_proba_oof, svm_log_oof
 
@@ -174,11 +171,8 @@ async def train_ensemble(site_name: str, save: bool = False) -> dict | None:
         logger.error(f"Insufficient data: only {len(df)} days available")
         return None
 
-    features = [
-        'avg_wind_speed', 'avg_wind_alignment', 'max_wind_gust', 'min_wind_speed',
-        'total_sunshine', 'total_precipitation', 'max_lapse_rate',
-    ]
-    X = df[features].values
+    X_rf = df[BASE_FEATURES].values
+    X_svm = compute_svm_features(df)
     y_binary = (df['flight_count'].values > 0).astype(int)
     y_log = np.log1p(df['flight_count'].values)
 
@@ -194,29 +188,29 @@ async def train_ensemble(site_name: str, save: bool = False) -> dict | None:
     )
 
     # --- Fit final models on full dataset ---
-    logger.info(f"Fitting final RF + SVM on full dataset ({len(X)} days)")
+    logger.info(f"Fitting final RF + SVM on full dataset ({len(X_rf)} days)")
 
     rf_model = _make_rf()
-    rf_model.fit(X, y_binary)
+    rf_model.fit(X_rf, y_binary)
 
     svm_model = _make_svm_pipe()
-    svm_model.fit(X, y_log)
+    svm_model.fit(X_svm, y_log)
 
-    # Feature importance: RF native, SVM permutation (scored on binary F1)
+    # Feature importance: RF native, SVM permutation
     rf_importance = pd.DataFrame({
-        'feature': features,
+        'feature': BASE_FEATURES,
         'importance': rf_model.feature_importances_,
     }).sort_values('importance', ascending=False)
 
     perm = permutation_importance(
-        svm_model, X, y_log,
+        svm_model, X_svm, y_log,
         n_repeats=10,
         random_state=SEED,
         n_jobs=-1,
         scoring='neg_root_mean_squared_error',
     )
     svm_importance = pd.DataFrame({
-        'feature': features,
+        'feature': SVM_FEATURES,
         'importance': perm.importances_mean,
         'importance_std': perm.importances_std,
     }).sort_values('importance', ascending=False)
@@ -231,6 +225,8 @@ async def train_ensemble(site_name: str, save: bool = False) -> dict | None:
         'alpha': best_alpha,
         'sigmoid_scale': SIGMOID_SCALE,
         'flyable_threshold': FLYABLE_THRESHOLD,
+        'rf_features': BASE_FEATURES,
+        'svm_features': SVM_FEATURES,
         'feature_importance_rf': rf_importance,
         'feature_importance_svm': svm_importance,
     }
@@ -245,12 +241,15 @@ async def train_ensemble(site_name: str, save: bool = False) -> dict | None:
 # Inference
 # ---------------------------------------------------------------------------
 
-def predict_ensemble(ensemble_data: dict, X: np.ndarray) -> pd.DataFrame:
+def predict_ensemble(ensemble_data: dict, X: np.ndarray, df: pd.DataFrame | None = None) -> pd.DataFrame:
     """Generate ensemble predictions for a feature matrix.
 
     Args:
         ensemble_data: Dict returned by train_ensemble() or load_ensemble_model().
-        X: Feature matrix with the 7 standard features (numpy array or DataFrame).
+        X: Feature matrix with the 7 base features (for RF).
+        df: Optional DataFrame with weather columns. If provided, SVM interaction
+            features are computed from it. If None, X must already contain all
+            SVM features (10 columns) for models trained with interactions.
 
     Returns:
         DataFrame with columns:
@@ -266,8 +265,21 @@ def predict_ensemble(ensemble_data: dict, X: np.ndarray) -> pd.DataFrame:
     threshold = ensemble_data['flyable_threshold']
     scale = ensemble_data['sigmoid_scale']
 
-    rf_prob = ensemble_data['rf_model'].predict_proba(X)[:, 1]
-    svm_log = ensemble_data['svm_model'].predict(X)
+    # RF always uses base features (first 7 columns)
+    X_rf = X[:, :len(BASE_FEATURES)] if X.shape[1] > len(BASE_FEATURES) else X
+    rf_prob = ensemble_data['rf_model'].predict_proba(X_rf)[:, 1]
+
+    # SVM uses extended features if model was trained with them
+    has_interactions = ensemble_data.get('svm_features') == SVM_FEATURES
+    if has_interactions and df is not None:
+        X_svm = compute_svm_features(df)
+    elif has_interactions and X.shape[1] == len(SVM_FEATURES):
+        X_svm = X
+    else:
+        # Backward compat: old models trained on 7 features
+        X_svm = X_rf
+
+    svm_log = ensemble_data['svm_model'].predict(X_svm)
     svm_prob = svm_to_prob(svm_log, threshold=threshold, scale=scale)
 
     ensemble_prob = alpha * rf_prob + (1.0 - alpha) * svm_prob
@@ -287,5 +299,6 @@ def predict_ensemble(ensemble_data: dict, X: np.ndarray) -> pd.DataFrame:
 if __name__ == '__main__':
     import asyncio
     do_save = True
-    asyncio.run(train_ensemble('Rammelsberg NW', save=do_save))
-    asyncio.run(scan_ensemble_alpha('Rammelsberg NW'))
+    site = 'Porta'
+    asyncio.run(train_ensemble(site, save=do_save))
+    asyncio.run(scan_ensemble_alpha(site))

@@ -12,6 +12,7 @@ from sklearn.metrics import f1_score
 
 from glider_sites_app.analysis.data_preparation import prepare_training_data
 from glider_sites_app.analysis.model_loader import save_svm_results
+from glider_sites_app.services.weather_service import gust_factor
 
 
 SEED = 431
@@ -22,8 +23,34 @@ k_folds = 5
 # Intended to be tuned globally (same value across all sites) once models for all sites exist.
 FLYABLE_THRESHOLD = 0.5
 
+# Feature definitions
+BASE_FEATURES = [
+    'avg_wind_speed', 'avg_wind_alignment', 'max_wind_gust', 'min_wind_speed',
+    'total_sunshine', 'total_precipitation', 'max_lapse_rate',
+]
+SVM_FEATURES = [
+    'avg_wind_speed', 'avg_wind_alignment', 'min_wind_speed', 'total_precipitation', 'max_lapse_rate',
+    'gust_factor', 'effective_wind', 'thermal_potential',
+]
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def compute_svm_features(df: pd.DataFrame) -> np.ndarray:
+    """Compute the SVM feature matrix (selected base + interaction features).
+
+    Args:
+        df: DataFrame from prepare_training_data with weather columns.
+
+    Returns:
+        numpy array with columns matching SVM_FEATURES (7 features).
+    """
+    gf = df.apply(lambda row: gust_factor(row['avg_wind_speed'], row['max_wind_gust']), axis=1).values.reshape(-1, 1)
+    effective_wind = (df['avg_wind_speed'] * df['avg_wind_alignment']).values.reshape(-1, 1)
+    thermal_potential = (df['max_lapse_rate'] * df['total_sunshine']).values.reshape(-1, 1)
+    base = df[['avg_wind_speed', 'avg_wind_alignment', 'min_wind_speed', 'total_precipitation', 'max_lapse_rate']].values
+    return np.hstack([base, gf, effective_wind, thermal_potential])
 
 
 async def train_svm_regressor(site_name: str, save: bool = False):
@@ -45,17 +72,9 @@ async def train_svm_regressor(site_name: str, save: bool = False):
         logger.error(f"Insufficient data: only {len(df)} days available")
         return None
 
-    # Features and target (same feature set as Random Forest)
-    features = [
-        'avg_wind_speed',
-        'avg_wind_alignment',
-        'max_wind_gust',
-        'min_wind_speed',
-        'total_sunshine',
-        'total_precipitation',
-        'max_lapse_rate',
-    ]
-    X = df[features].values
+    # Features and target
+    X = compute_svm_features(df)
+    features = SVM_FEATURES
     y = np.log1p(df['flight_count'].values)
 
     # Pipeline: StandardScaler is mandatory for SVM (sensitive to feature scale)
@@ -117,7 +136,7 @@ async def train_svm_regressor(site_name: str, save: bool = False):
     result = {
         'site_name': site_name,
         'model': pipe,
-        'features': features,
+        'features': SVM_FEATURES,
         'feature_importance': importance,
         'flyable_threshold': FLYABLE_THRESHOLD,
     }

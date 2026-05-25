@@ -12,14 +12,21 @@ fi
 SITE="$1"
 echo "=== Retraining models for: $SITE ==="
 
-echo "[1/2] Training ensemble (RF + SVR)..."
+echo "[1/3] Training standalone RF classifier..."
+python -c "
+import asyncio
+from glider_sites_app.analysis.random_forest import train_flight_predictor
+asyncio.run(train_flight_predictor('$SITE', 'classifier', save=True))
+"
+
+echo "[2/3] Training ensemble (RF + SVR)..."
 python -c "
 import asyncio
 from glider_sites_app.analysis.ensemble import train_ensemble
 asyncio.run(train_ensemble('$SITE', save=True))
 "
 
-echo "[2/2] Training Bayesian Network..."
+echo "[3/3] Training Bayesian Network..."
 python -c "
 import asyncio
 from glider_sites_app.analysis.bayes_network import flight_predictor

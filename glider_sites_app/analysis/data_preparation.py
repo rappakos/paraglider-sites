@@ -3,12 +3,18 @@
 import logging
 import holidays
 import pandas as pd
+from datetime import date
 
 from glider_sites_app.services.weather_service import load_agg_weather_data
 from glider_sites_app.services.flight_service import load_flight_data
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Site-specific minimum training date (e.g. launch opened for paragliders later)
+SITE_MIN_DATE = {
+    'Porta': date(2020, 1, 1),
+}
 
 async def prepare_training_data(site_name: str, use_workingdays: bool = False, FKPilotID: str = None) -> pd.DataFrame:
     """Merge flight and weather data"""
@@ -23,7 +29,14 @@ async def prepare_training_data(site_name: str, use_workingdays: bool = False, F
     # Ensure date columns are the same type before merge
     weather_df['date'] = pd.to_datetime(weather_df['date']).dt.date
     flights_df['date'] = pd.to_datetime(flights_df['date']).dt.date
-    
+
+    # Apply site-specific minimum date filter
+    min_date = SITE_MIN_DATE.get(site_name)
+    if min_date:
+        weather_df = weather_df[weather_df['date'] >= min_date]
+        flights_df = flights_df[flights_df['date'] >= min_date]
+        logger.info(f"Filtered {site_name} to dates >= {min_date}")
+
     # Merge on date - LEFT JOIN to keep all weather days
     merged_df = weather_df.merge(
         flights_df[['date', 'flight_count', 'max_daily_score','best_score','avg_flight_duration']], # best_score = best global score of the best pilot on that day

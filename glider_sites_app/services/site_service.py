@@ -109,7 +109,10 @@ async def get_forecast_data(site_name: str, start_date: str = '2025-06-01', end_
         X = weather_df[BASE_FEATURES]
         ens_result = await asyncio.to_thread(predict_ensemble, ensemble_data, X, weather_df)
         weather_df['rf_prediction'] = ens_result['is_flyable'].astype(int)
-        weather_df['rf_confidence'] = ens_result['ensemble_prob']
+        # Show confidence for the predicted class (complement for non-flyable)
+        weather_df['rf_confidence'] = ens_result['ensemble_prob'].apply(
+            lambda p: p if p >= 0.5 else 1 - p
+        )
         weather_df['prediction_model'] = 'ensemble'
     else:
         # Fallback to standalone RF

@@ -1,13 +1,17 @@
 # repositories/weather_repository.py
+import asyncio
 from glider_sites_app.tools.weather.constants import HOURLY_PARAMS_ARCHIVE,HOURLY_PARAMS
-from ..db import DB_NAME
+from ..db import DB_NAME, AIOSQLITE_TIMEOUT
 import aiosqlite
 from pandas import DataFrame, read_sql_query
 from sqlalchemy import create_engine, text
 
-async def load_weather_data(site_name: str) -> DataFrame:
+_ENGINE_KWARGS = {'connect_args': {'timeout': 30}}
+
+
+def _load_weather_data_sync(site_name: str) -> DataFrame:
     """Load weather data for a site"""
-    engine = create_engine(f'sqlite:///{DB_NAME}')
+    engine = create_engine(f'sqlite:///{DB_NAME}', **_ENGINE_KWARGS)
     try:
         with engine.connect() as db:
             df = read_sql_query(
@@ -37,6 +41,11 @@ async def load_weather_data(site_name: str) -> DataFrame:
     finally:
         engine.dispose()
 
+
+async def load_weather_data(site_name: str) -> DataFrame:
+    return await asyncio.to_thread(_load_weather_data_sync, site_name)
+
+
 async def fix_temperature_850hPa_pre2020(df_weather: DataFrame):
     """Fix temperature_850hPa for pre-2020 data using some external source (placeholder)"""
     
@@ -49,7 +58,7 @@ async def fix_temperature_850hPa_pre2020(df_weather: DataFrame):
               AND site_name = ?
               AND DATE(time) = ?"""
 
-    async with aiosqlite.connect(DB_NAME) as db:
+    async with aiosqlite.connect(DB_NAME, timeout=AIOSQLITE_TIMEOUT) as db:
         rows = await db.executemany(sql, updates)
         print(f"Updated {rows.rowcount} rows with fixed temperature_850hPa for {df_weather['site_name'].iloc[0]}")
         await db.commit()
@@ -73,7 +82,7 @@ async def save_weather_data(df_weather: DataFrame):
             ({', '.join(columns_to_save)})
             VALUES ({','.join(['?' for _ in columns_to_save])})"""
 
-    async with aiosqlite.connect(DB_NAME) as db:
+    async with aiosqlite.connect(DB_NAME, timeout=AIOSQLITE_TIMEOUT) as db:
         await db.executemany(sql, df_to_save.values.tolist())
         await db.commit()
 

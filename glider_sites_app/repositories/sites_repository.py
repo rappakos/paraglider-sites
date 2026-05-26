@@ -1,11 +1,14 @@
 # repositories/sites_repository.py
+import asyncio
 from sqlalchemy import create_engine, text
 from ..db import DB_NAME
 from pandas import read_sql_query, DataFrame
 
+_ENGINE_KWARGS = {'connect_args': {'timeout': 30}}
 
-async def get_stats() -> DataFrame:  
-    engine = create_engine(f'sqlite:///{DB_NAME}?charset=utf8')
+
+def _get_stats_sync() -> DataFrame:
+    engine = create_engine(f'sqlite:///{DB_NAME}?charset=utf8', **_ENGINE_KWARGS)
     try:
         with engine.connect() as db:
             param = {}
@@ -32,8 +35,13 @@ async def get_stats() -> DataFrame:
     finally:
         engine.dispose()
 
-async def get_main_direction(site_name: str) -> int:
-    engine = create_engine(f'sqlite:///{DB_NAME}?charset=utf8')
+
+async def get_stats() -> DataFrame:
+    return await asyncio.to_thread(_get_stats_sync)
+
+
+def _get_main_direction_sync(site_name: str) -> int:
+    engine = create_engine(f'sqlite:///{DB_NAME}?charset=utf8', **_ENGINE_KWARGS)
     try:
         with engine.connect() as db:
             param = {'site_name': site_name}
@@ -47,3 +55,7 @@ async def get_main_direction(site_name: str) -> int:
                 raise ValueError(f"Site {site_name} not found")
     finally:
         engine.dispose()
+
+
+async def get_main_direction(site_name: str) -> int:
+    return await asyncio.to_thread(_get_main_direction_sync, site_name)

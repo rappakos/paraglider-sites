@@ -1,12 +1,16 @@
 # repositories/flights_repository.py
-from ..db import DB_NAME
+import asyncio
+from ..db import DB_NAME, AIOSQLITE_TIMEOUT
 import aiosqlite
 from pandas import read_sql_query, DataFrame
 from sqlalchemy import create_engine, text
 
-async def load_flight_counts(site_name: str, FKPilotID: str = None) -> DataFrame:
+_ENGINE_KWARGS = {'connect_args': {'timeout': 30}}
+
+
+def _load_flight_counts_sync(site_name: str, FKPilotID: str = None) -> DataFrame:
     """Load daily flight counts for a site"""
-    engine = create_engine(f'sqlite:///{DB_NAME}')
+    engine = create_engine(f'sqlite:///{DB_NAME}', **_ENGINE_KWARGS)
     try:
         with engine.connect() as db:
             df = read_sql_query(
@@ -42,9 +46,14 @@ async def load_flight_counts(site_name: str, FKPilotID: str = None) -> DataFrame
     finally:
         engine.dispose()
 
-async def get_xcontest_flight_counts(site_name: str) -> DataFrame:
+
+async def load_flight_counts(site_name: str, FKPilotID: str = None) -> DataFrame:
+    return await asyncio.to_thread(_load_flight_counts_sync, site_name, FKPilotID)
+
+
+def _get_xcontest_flight_counts_sync(site_name: str) -> DataFrame:
     """Load daily xcontest flight counts for a site"""
-    engine = create_engine(f'sqlite:///{DB_NAME}')
+    engine = create_engine(f'sqlite:///{DB_NAME}', **_ENGINE_KWARGS)
     try:
         with engine.connect() as db:
             df = read_sql_query(
@@ -95,9 +104,13 @@ async def get_xcontest_flight_counts(site_name: str) -> DataFrame:
         engine.dispose()
 
 
-async def pilot_stats() -> DataFrame:
+async def get_xcontest_flight_counts(site_name: str) -> DataFrame:
+    return await asyncio.to_thread(_get_xcontest_flight_counts_sync, site_name)
+
+
+def _pilot_stats_sync() -> DataFrame:
     """Load pilot statistics"""
-    engine = create_engine(f'sqlite:///{DB_NAME}')
+    engine = create_engine(f'sqlite:///{DB_NAME}', **_ENGINE_KWARGS)
     try:
         with engine.connect() as db:
             df  = read_sql_query(text(f"""
@@ -113,9 +126,12 @@ async def pilot_stats() -> DataFrame:
         engine.dispose()
 
 
+async def pilot_stats() -> DataFrame:
+    return await asyncio.to_thread(_pilot_stats_sync)
 
-async def get_flights(site_name:str):
-    engine = create_engine(f'sqlite:///{DB_NAME}')
+
+def _get_flights_sync(site_name: str):
+    engine = create_engine(f'sqlite:///{DB_NAME}', **_ENGINE_KWARGS)
     try:
         with engine.connect() as db:
             param = {'site_name':site_name}
@@ -129,8 +145,13 @@ async def get_flights(site_name:str):
     finally:
         engine.dispose()
 
-async def get_last_xcontest_flight_date(site_name: str):
-    engine = create_engine(f'sqlite:///{DB_NAME}')
+
+async def get_flights(site_name: str):
+    return await asyncio.to_thread(_get_flights_sync, site_name)
+
+
+def _get_last_xcontest_flight_date_sync(site_name: str):
+    engine = create_engine(f'sqlite:///{DB_NAME}', **_ENGINE_KWARGS)
     try:
         with engine.connect() as db:
             param = {'site_name': site_name}
@@ -146,13 +167,16 @@ async def get_last_xcontest_flight_date(site_name: str):
         engine.dispose()
 
 
+async def get_last_xcontest_flight_date(site_name: str):
+    return await asyncio.to_thread(_get_last_xcontest_flight_date_sync, site_name)
+
 
 async def save_dhv_flights(df_flights:DataFrame):
     columns_to_save = ['IDFlight', 'FlightDate', 'FlightStartTime', 'FKPilot', 
                        'Glider', 'GliderClassification', 'FlightDuration', 
                        'BestTaskPoints', 'BestTaskType', 'site_name']
 
-    async with aiosqlite.connect(DB_NAME) as db:
+    async with aiosqlite.connect(DB_NAME, timeout=AIOSQLITE_TIMEOUT) as db:
         await db.executemany("""
             INSERT OR IGNORE INTO dhv_flights 
             (IDFlight, 
@@ -178,7 +202,7 @@ async def save_xcontest_flights(df_flights:DataFrame):
                        'distance_km', 'points', 'glider_category', 'glider_name', 
                        'flight_details', 'site_name']
 
-    async with aiosqlite.connect(DB_NAME) as db:
+    async with aiosqlite.connect(DB_NAME, timeout=AIOSQLITE_TIMEOUT) as db:
         await db.executemany("""
             INSERT OR IGNORE INTO xcontest_flights 
             (flight_id, 

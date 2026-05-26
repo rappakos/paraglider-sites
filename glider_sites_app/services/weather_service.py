@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import numpy as np
 from datetime import datetime, timedelta
@@ -147,7 +148,7 @@ async def load_forecast_weather(site_name:str, start_date:str, end_date:str) -> 
         filter = (raw_weather_df['date'] >= start_date) & (raw_weather_df['date'] <= end_date)
         raw_weather_df = raw_weather_df[filter]
 
-    weather_df = aggregate_weather(raw_weather_df,main_direction)
+    weather_df = await asyncio.to_thread(aggregate_weather, raw_weather_df, main_direction)
 
     return weather_df
 
@@ -155,7 +156,7 @@ async def load_forecast_weather(site_name:str, start_date:str, end_date:str) -> 
 async def load_agg_weather_data(site_name:str) -> DataFrame:
     main_direction =  await get_main_direction(site_name)
     raw_weather_df = await load_weather_data(site_name)
-    weather_df = aggregate_weather(raw_weather_df,main_direction)
+    weather_df = await asyncio.to_thread(aggregate_weather, raw_weather_df, main_direction)
     
     return weather_df
     

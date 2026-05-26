@@ -1,4 +1,5 @@
 
+import asyncio
 import logging
 import requests
 import pandas as pd
@@ -9,8 +10,10 @@ from glider_sites_app.tools.weather.constants import END_HOUR, HOURLY_PARAMS, HO
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+HTTP_TIMEOUT = 30  # seconds
 
-async def load_new_forecast_data(geo_lat: float,geo_long:float, elevation:float):
+
+def _load_new_forecast_data_sync(geo_lat: float, geo_long: float, elevation: float):
     start_date = pd.Timestamp.now().strftime('%Y-%m-%d')
     end_date = (pd.Timestamp.now() + pd.Timedelta(days=7)).strftime('%Y-%m-%d')
     params = {
@@ -22,7 +25,7 @@ async def load_new_forecast_data(geo_lat: float,geo_long:float, elevation:float)
 	    "hourly":  HOURLY_PARAMS,
     }
     openmeteo_url = f'{URL_FORECAST}?latitude={params["latitude"]}&longitude={params["longitude"]}&elevation={params["elevation"]}&start_date={params["start_date"]}&end_date={params["end_date"]}&hourly={",".join(params["hourly"])}&timezone={TIME_ZONE}'
-    res = requests.get(openmeteo_url)
+    res = requests.get(openmeteo_url, timeout=HTTP_TIMEOUT)
     if res.status_code == 200:
         data = res.json()
         logger.info(f"{len(data['hourly']['time'])} weather data rows fetched for lat={geo_lat:.3}, lon={geo_long:.3} from {start_date} to {end_date}")
@@ -36,9 +39,14 @@ async def load_new_forecast_data(geo_lat: float,geo_long:float, elevation:float)
         return df[filter_mask]
     else:
         logging.warning(f"Failed with {res.status_code}:{res}")
-        return None    
+        return None
 
-async def refresh_weather_data(geo_lat: float,geo_long:float, elevation:float, start_date:str, end_date: str ):
+
+async def load_new_forecast_data(geo_lat: float, geo_long: float, elevation: float):
+    return await asyncio.to_thread(_load_new_forecast_data_sync, geo_lat, geo_long, elevation)
+
+
+def _refresh_weather_data_sync(geo_lat: float, geo_long: float, elevation: float, start_date: str, end_date: str):
     if not start_date:
         start_date = '2018-01-01'
         end_date = '2018-12-31'
@@ -55,7 +63,7 @@ async def refresh_weather_data(geo_lat: float,geo_long:float, elevation:float, s
     }
 
     openmeteo_url = f'{URL_ARCHIVE if use_archive else URL}?latitude={params["latitude"]}&longitude={params["longitude"]}&elevation={params["elevation"]}&start_date={params["start_date"]}&end_date={params["end_date"]}&hourly={",".join(params["hourly"])}&timezone={TIME_ZONE}'
-    res = requests.get(openmeteo_url)
+    res = requests.get(openmeteo_url, timeout=HTTP_TIMEOUT)
     if res.status_code == 200:
         data = res.json()
         logger.info(f"{len(data['hourly']['time'])} weather data rows fetched for lat={geo_lat:.3}, lon={geo_long:.3} from {start_date} to {end_date}")
@@ -69,6 +77,10 @@ async def refresh_weather_data(geo_lat: float,geo_long:float, elevation:float, s
     else:
         logging.warning(f"Failed with {res.status_code}:{res}")
         return None
+
+
+async def refresh_weather_data(geo_lat: float, geo_long: float, elevation: float, start_date: str, end_date: str):
+    return await asyncio.to_thread(_refresh_weather_data_sync, geo_lat, geo_long, elevation, start_date, end_date)
 
 
 if __name__ == "__main__":

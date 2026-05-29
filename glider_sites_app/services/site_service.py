@@ -51,6 +51,11 @@ async def get_site_data(site_name: str):
     else:
         result['has_model'] = False
 
+    # Include wind direction stats
+    direction_stats = await get_direction_stats(site_name)
+    if direction_stats is not None:
+        result['direction_stats'] = direction_stats
+
     return result
 
 

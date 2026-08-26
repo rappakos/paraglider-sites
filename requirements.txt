@@ -21,3 +21,4 @@ xarray
 plotly
 jinja2
 cdsapi
+pytest

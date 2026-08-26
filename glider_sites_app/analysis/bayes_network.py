@@ -566,7 +566,7 @@ async def flight_predictor(site_name: str,
         features = [
             'avg_wind_speed', 'max_wind_gust', 'avg_wind_alignment',
             'max_lapse_rate', 'max_boundary_layer_height', 'wind_speed_850hPa',
-             'rf_confidence','rf_prediction'
+             'rf_confidence','rf_prediction',
             'is_workingday', 'best_score','avg_flight_duration'
         ]
         save_bayesian_model(model, site_name, features)

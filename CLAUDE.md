@@ -68,8 +68,18 @@ a fresh clone has no data and no models. Bootstrap order: create venv →
 
 ## Verification
 
-This repo has **no test suite** (tests live only in sibling projects). Until one
-exists, verify a change by:
+Tests live in `tests/` and run with `python -m pytest` from the repo root using this
+project's venv. Coverage is currently limited to `analysis.model_loader`.
+
+Two constraints on the suite — keep them:
+
+- It must never touch the live DB or a real `.joblib` artifact. The autouse fixtures
+  in `tests/test_model_loader.py` redirect every path helper into `tmp_path` and swap
+  in a recording fake for `joblib`; new tests belong inside that arrangement.
+- Keep heavy analysis imports out of it. Importing `analysis.bayes_network` alone
+  costs ~27 s (pgmpy), which would dwarf the current ~2 s run.
+
+The suite covers little so far, so also verify a change by:
 
 1. running the affected module (`python -m glider_sites_app....`),
 2. starting uvicorn and exercising the affected route or page,

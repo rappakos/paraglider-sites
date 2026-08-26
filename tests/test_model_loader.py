@@ -153,8 +153,10 @@ def test_a_saved_classifier_does_not_answer_a_regressor_load(fake_joblib):
 
 def test_a_saved_svm_does_not_answer_an_ensemble_load(fake_joblib):
     model_loader.save_svm_results("Börry", {"model": "<svc>"})
+    fake_joblib.load_returns = fake_joblib.last_payload
 
     assert model_loader.load_ensemble_model("Börry") is None
+    assert model_loader.load_svm_model("Börry") == {"model": "<svc>"}
 
 
 # --- saving ---
